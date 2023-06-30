@@ -11,6 +11,11 @@ Prerequisites:
 
 `git clone --recursive https://github.com/RutvikPanchal/Swiftcanon.git`
 
+## VSCode Intellisense config
+- Install C/C++ VSCode Extension
+- Run ./_package.sh
+- Reload VSCode Window and Click on Yes on the C++ Extension notification that pops up asking to configure using /build/compile_commands.json
+
 ## Windows:
 
 ```

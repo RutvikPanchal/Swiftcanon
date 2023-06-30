@@ -46,3 +46,6 @@ _deps
 
 #CMake build folder
 build/
+
+#VSCode
+.vscode
