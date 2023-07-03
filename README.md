@@ -20,12 +20,14 @@ Prerequisites:
 
 ```
 Step 1: cmake -S . -B ./build
-Step 2: Open the solution file in build folder in Visual Studio and the project is ready to run
+Step 2: Open the solution file (in build folder) to launch Visual Studio and the project is ready to run
 ```
 
 ## Linux / MacOS:
 
 ```
-Step 1: ./_package.sh
+Step 1: ./_package_debug.sh
+  or
+Step 1: ./_package_release.sh
 Step 2: ./build/Swiftcanon
 ```
