@@ -7,6 +7,13 @@
 Swiftcanon::Swiftcanon()
     :requiredValidationLayers({
         "VK_LAYER_KHRONOS_validation"
+    }),
+    requiredVkInstanceExtensions({
+        VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
+    }),
+    requiredDeviceInstanceExtensions({
+        "VK_KHR_portability_subset"
     })
 {}
 
@@ -33,10 +40,11 @@ void Swiftcanon::initWindow()
 
 void Swiftcanon::initVulkan()
 {
-    addVulkanExtensions();
     addVulkanValidationLayers();
+    addVulkanInstanceExtensions();
     createVulkanInstance();
     pickPhysicalGraphicsDevice();
+    createVulkanLogicalDevice();
 }
 
 void Swiftcanon::addVulkanValidationLayers()
@@ -60,7 +68,7 @@ void Swiftcanon::addVulkanValidationLayers()
         if (layerFound) {
             std::cout << "[VULKAN] Adding Validation Layers:" << std::endl;
             for (uint32_t i = 0; i < requiredValidationLayers.size(); i++) {
-                std::cout << "[VULKAN]  " << requiredValidationLayers.data()[i] << std::endl;
+                std::cout << "[VULKAN]   " << requiredValidationLayers.data()[i] << std::endl;
             }
         }
         else {
@@ -69,21 +77,23 @@ void Swiftcanon::addVulkanValidationLayers()
     }
 }
 
-void Swiftcanon::addVulkanExtensions()
+void Swiftcanon::addVulkanInstanceExtensions()
 {
     uint32_t extensionCount;
-    uint32_t requiredExtensionCount;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+    std::cout << "[VULKAN] " << extensionCount << " Vulkan Instance Extensions available" << std::endl;
+
+    uint32_t requiredExtensionCount;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&requiredExtensionCount);
+    std::cout << "[VULKAN] " << requiredVkInstanceExtensions.size() << " Vulkan Instance Extensions enabled:" << std::endl;
 
-    // MacOS Specific Config
-        for(uint32_t i = 0; i < requiredExtensionCount; i++) {
-            requiredExtensions.push_back(glfwExtensions[i]);
-        }
-        requiredExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    for(uint32_t i = 0; i < requiredExtensionCount; i++) {
+        requiredVkInstanceExtensions.push_back(glfwExtensions[i]);
+    }
 
-    std::cout << "[VULKAN] " << extensionCount << " extensions available" << std::endl;
-    std::cout << "[VULKAN] " << requiredExtensions.size() << " extensions enabled" << std::endl;
+    for(uint32_t i = 0; i < requiredVkInstanceExtensions.size(); i++) {
+        std::cout << "[VULKAN]   " << requiredVkInstanceExtensions[i] << std::endl;
+    }
 }
 
 void Swiftcanon::createVulkanInstance()
@@ -91,8 +101,8 @@ void Swiftcanon::createVulkanInstance()
     VkInstanceCreateInfo createInfo{};
     createInfo.sType                    = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.flags                    = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    createInfo.enabledExtensionCount    = static_cast<uint32_t>(requiredExtensions.size());
-    createInfo.ppEnabledExtensionNames  = requiredExtensions.data();
+    createInfo.enabledExtensionCount    = static_cast<uint32_t>(requiredVkInstanceExtensions.size());
+    createInfo.ppEnabledExtensionNames  = requiredVkInstanceExtensions.data();
     if (enableValidationLayers) {
         createInfo.enabledLayerCount    = static_cast<uint32_t>(requiredValidationLayers.size());
         createInfo.ppEnabledLayerNames  = requiredValidationLayers.data();
@@ -104,7 +114,7 @@ void Swiftcanon::createVulkanInstance()
     VkResult result = vkCreateInstance(&createInfo, nullptr, &vkInstance);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("Failed to create Vulkan instance!");
+        throw std::runtime_error("[VULKAN] Failed to create Vulkan instance!");
     }
 }
 
@@ -128,10 +138,10 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
         std::cout << "[VULKAN] " << deviceCount << " Physical Graphics Devices Found: " << std::endl;
         for (int i = 0; i < allDeviceDetails.size(); i++) {
             if (i == 0) {
-                std::cout << "[VULKAN]  * " << allDeviceDetails[i].name << ", score: " << allDeviceDetails[i].score << std::endl;
+                std::cout << "[VULKAN]   * " << allDeviceDetails[i].name << ", score: " << allDeviceDetails[i].score << std::endl;
             }
             else{
-                std::cout << "[VULKAN]    " << allDeviceDetails[i].name << ", score: " << allDeviceDetails[i].score << std::endl;
+                std::cout << "[VULKAN]     " << allDeviceDetails[i].name << ", score: " << allDeviceDetails[i].score << std::endl;
             }
         }
 
@@ -146,6 +156,50 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
         if (physicalDevice == VK_NULL_HANDLE) {
             throw std::runtime_error("[Vulkan] Failed to find a suitable GPU");
         }
+    }
+}
+
+void Swiftcanon::createVulkanLogicalDevice()
+{
+    uint32_t deviceExtensionCount;
+    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &deviceExtensionCount, nullptr);
+    std::cout << "[VULKAN] " << deviceExtensionCount << " Device Extensions available" << std::endl;
+    
+    std::cout << "[VULKAN] " << requiredDeviceInstanceExtensions.size() << " Device Extensions enabled:" << std::endl;
+    for (int i = 0; i < requiredDeviceInstanceExtensions.size(); i++) {
+        std::cout << "[VULKAN]   " << requiredDeviceInstanceExtensions[i] << std::endl;
+    }
+    
+    VkDeviceQueueCreateInfo queueCreateInfo{};
+    float queuePriority = 1.0f;
+    queueCreateInfo.sType               = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueCreateInfo.queueFamilyIndex    = indices.graphicsFamily.value();;
+    queueCreateInfo.queueCount          = 1;
+    queueCreateInfo.pQueuePriorities    = &queuePriority;
+
+    VkPhysicalDeviceFeatures deviceFeatures{};
+
+    VkDeviceCreateInfo createInfo{};
+    createInfo.sType                    = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.pQueueCreateInfos        = &queueCreateInfo;
+    createInfo.queueCreateInfoCount     = 1;
+    createInfo.pEnabledFeatures         = &deviceFeatures;
+    createInfo.enabledExtensionCount    = static_cast<uint32_t>(requiredDeviceInstanceExtensions.size());
+    createInfo.ppEnabledExtensionNames  = requiredDeviceInstanceExtensions.data();
+    if (enableValidationLayers) {
+        createInfo.enabledLayerCount    = static_cast<uint32_t>(requiredValidationLayers.size());
+        createInfo.ppEnabledLayerNames  = requiredValidationLayers.data();
+    } else {
+        createInfo.enabledLayerCount    = 0;
+    }
+
+    VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
+    if (result == VK_SUCCESS) {
+        vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+    }
+    else {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to create logical device");
     }
 }
 
@@ -170,13 +224,13 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-    bool queueFamilySupport = false;
     for (int i = 0; i < queueFamilies.size(); i++) {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            queueFamilySupport = true;
+            indices.graphicsFamily = i;
+            break;
         }
     }
-    if(queueFamilySupport == false){
+    if(indices.isComplete() == false){
         score = 0;
     }
 
@@ -212,6 +266,7 @@ void Swiftcanon::mainLoop()
 
 void Swiftcanon::cleanup()
 {
+    vkDestroyDevice(device, nullptr);
     vkDestroyInstance(vkInstance, nullptr);
     glfwDestroyWindow(window);
     glfwTerminate();

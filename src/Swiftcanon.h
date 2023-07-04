@@ -2,11 +2,19 @@
 #include <GLFW/glfw3.h>
 
 #include <vector>
+#include <optional>
 
 struct DeviceDetails {
     const char* name;
     int deviceIndex;
     int score;
+};
+
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+    bool isComplete() {
+        return graphicsFamily.has_value();
+    }
 };
 
 class Swiftcanon
@@ -23,18 +31,23 @@ private:
     void cleanup();
 
     void addVulkanValidationLayers();
-    void addVulkanExtensions();
+    void addVulkanInstanceExtensions();
     void createVulkanInstance();
     void pickPhysicalGraphicsDevice();
+    void createVulkanLogicalDevice();
     
     void ratePhysicalGraphicsDevices(VkPhysicalDevice device, int deviceIndex);
 
     GLFWwindow*                     window;
-    std::vector<const char*>        requiredExtensions;
     std::vector<const char*> const  requiredValidationLayers;
+    std::vector<const char*>        requiredVkInstanceExtensions;
     VkInstance                      vkInstance;
-    VkPhysicalDevice                physicalDevice = VK_NULL_HANDLE;
     std::vector<DeviceDetails>      allDeviceDetails;
+    VkPhysicalDevice                physicalDevice = VK_NULL_HANDLE;
+    QueueFamilyIndices              indices;
+    std::vector<const char*>        requiredDeviceInstanceExtensions;
+    VkDevice                        device;
+    VkQueue                         graphicsQueue;
 
     // TODO: not best way to to this, should have like a global debug setup
     #ifdef NDEBUG
