@@ -9,11 +9,15 @@ Swiftcanon::Swiftcanon()
         "VK_LAYER_KHRONOS_validation"
     }),
     requiredVulkanExtensions({
-        VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
-        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
+        #ifdef APPLE
+            VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
+        #endif
     }),
     requiredDeviceExtensions({
-        "VK_KHR_portability_subset",
+        #ifdef APPLE
+            "VK_KHR_portability_subset",
+        #endif
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     })
 {}
