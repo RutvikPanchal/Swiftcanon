@@ -1,0 +1,69 @@
+<mxfile host="65bd71144e">
+    <diagram id="6OefLpY3UeXjTtCXeHLk" name="Page-1">
+        <mxGraphModel dx="796" dy="485" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="GPU (Physical Device)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="600" width="360" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="CPU" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+                    <mxGeometry x="160" y="240" width="40" height="320" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=8;endArrow=none;endFill=0;" edge="1" parent="1" source="5" target="16">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="Vulkan Instance Extensions" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fad9d5;strokeColor=#ae4132;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="280" width="360" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="Vulkan Instance" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="320" width="360" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="Logical Device Extensions" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fad9d5;strokeColor=#ae4132;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="440" width="360" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="Logical Device" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="400" width="360" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="&lt;font style=&quot;font-size: 8px;&quot;&gt;Queue Family 0&lt;br&gt;Graphics + Present&lt;br&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="560" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="&lt;span style=&quot;font-size: 8px;&quot;&gt;Queue Family 1&lt;/span&gt;&lt;br style=&quot;border-color: var(--border-color); font-size: 8px;&quot;&gt;&lt;span style=&quot;font-size: 8px;&quot;&gt;Graphics&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="560" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="&lt;span style=&quot;font-size: 8px;&quot;&gt;Queue Family 2&lt;/span&gt;&lt;br style=&quot;border-color: var(--border-color); font-size: 8px;&quot;&gt;&lt;span style=&quot;font-size: 8px;&quot;&gt;Graphics&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+                    <mxGeometry x="380" y="560" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="&lt;span style=&quot;font-size: 8px;&quot;&gt;Queue Family 3&lt;/span&gt;&lt;br style=&quot;border-color: var(--border-color); font-size: 8px;&quot;&gt;&lt;span style=&quot;font-size: 8px;&quot;&gt;Present&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+                    <mxGeometry x="470" y="560" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=8;arcSize=4;endArrow=none;endFill=0;" edge="1" parent="1" source="14" target="8">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="290" y="530"/>
+                            <mxPoint x="245" y="530"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="14" value="Graphics Queue" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fad9d5;strokeColor=#ae4132;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="480" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0.75;entryY=0;entryDx=0;entryDy=0;fontSize=8;arcSize=4;endArrow=none;endFill=0;" edge="1" parent="1" source="15" target="8">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="470" y="540"/>
+                            <mxPoint x="268" y="540"/>
+                            <mxPoint x="268" y="560"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="15" value="Present Queue" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fad9d5;strokeColor=#ae4132;" vertex="1" parent="1">
+                    <mxGeometry x="380" y="480" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="Operating System (OS)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="200" width="360" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

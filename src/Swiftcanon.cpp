@@ -1,19 +1,20 @@
 #include "Swiftcanon.h"
 
 #include <iostream>
-#include <map>
+#include <set>
 #include <vulkan/vk_enum_string_helper.h>
 
 Swiftcanon::Swiftcanon()
     :requiredValidationLayers({
         "VK_LAYER_KHRONOS_validation"
     }),
-    requiredVkInstanceExtensions({
+    requiredVulkanExtensions({
         VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
     }),
-    requiredDeviceInstanceExtensions({
-        "VK_KHR_portability_subset"
+    requiredDeviceExtensions({
+        "VK_KHR_portability_subset",
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
     })
 {}
 
@@ -43,6 +44,7 @@ void Swiftcanon::initVulkan()
     addVulkanValidationLayers();
     addVulkanInstanceExtensions();
     createVulkanInstance();
+    createSurface();
     pickPhysicalGraphicsDevice();
     createVulkanLogicalDevice();
 }
@@ -72,7 +74,7 @@ void Swiftcanon::addVulkanValidationLayers()
             }
         }
         else {
-            throw std::runtime_error("validation layers requested, but not available!");
+            throw std::runtime_error("[VULKAN] Validation layers requested, but are not available");
         }
     }
 }
@@ -85,14 +87,13 @@ void Swiftcanon::addVulkanInstanceExtensions()
 
     uint32_t requiredExtensionCount;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&requiredExtensionCount);
-    std::cout << "[VULKAN] " << requiredVkInstanceExtensions.size() << " Vulkan Instance Extensions enabled:" << std::endl;
-
     for(uint32_t i = 0; i < requiredExtensionCount; i++) {
-        requiredVkInstanceExtensions.push_back(glfwExtensions[i]);
+        requiredVulkanExtensions.push_back(glfwExtensions[i]);
     }
+    std::cout << "[VULKAN] " << requiredVulkanExtensions.size() << " Vulkan Instance Extensions enabled:" << std::endl;
 
-    for(uint32_t i = 0; i < requiredVkInstanceExtensions.size(); i++) {
-        std::cout << "[VULKAN]   " << requiredVkInstanceExtensions[i] << std::endl;
+    for(uint32_t i = 0; i < requiredVulkanExtensions.size(); i++) {
+        std::cout << "[VULKAN]   " << requiredVulkanExtensions[i] << std::endl;
     }
 }
 
@@ -101,8 +102,8 @@ void Swiftcanon::createVulkanInstance()
     VkInstanceCreateInfo createInfo{};
     createInfo.sType                    = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.flags                    = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    createInfo.enabledExtensionCount    = static_cast<uint32_t>(requiredVkInstanceExtensions.size());
-    createInfo.ppEnabledExtensionNames  = requiredVkInstanceExtensions.data();
+    createInfo.enabledExtensionCount    = static_cast<uint32_t>(requiredVulkanExtensions.size());
+    createInfo.ppEnabledExtensionNames  = requiredVulkanExtensions.data();
     if (enableValidationLayers) {
         createInfo.enabledLayerCount    = static_cast<uint32_t>(requiredValidationLayers.size());
         createInfo.ppEnabledLayerNames  = requiredValidationLayers.data();
@@ -114,7 +115,16 @@ void Swiftcanon::createVulkanInstance()
     VkResult result = vkCreateInstance(&createInfo, nullptr, &vkInstance);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create Vulkan instance!");
+        throw std::runtime_error("[VULKAN] Failed to create Vulkan instance");
+    }
+}
+
+void Swiftcanon::createSurface()
+{
+    VkResult result = glfwCreateWindowSurface(vkInstance, window, nullptr, &surface);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to create Window Surface");
     }
 }
 
@@ -148,6 +158,10 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
         // Gets the device with the highest score
         if (allDeviceDetails[0].score > 0){
             physicalDevice = devices[allDeviceDetails[0].deviceIndex];
+            std::cout << "[VULKAN] Device Details: " << allDeviceDetails[0].name << std::endl;
+            std::cout << "[VULKAN]   QueueFamily Indices:" << std::endl;
+            std::cout << "[VULKAN]     Graphics:     " << indices[0].graphicsFamily.value() << std::endl;
+            std::cout << "[VULKAN]     Presentation: " << indices[0].presentFamily.value() << std::endl;
         }
         else {
             throw std::runtime_error("[Vulkan] Failed to find a suitable GPU");
@@ -165,27 +179,33 @@ void Swiftcanon::createVulkanLogicalDevice()
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &deviceExtensionCount, nullptr);
     std::cout << "[VULKAN] " << deviceExtensionCount << " Device Extensions available" << std::endl;
     
-    std::cout << "[VULKAN] " << requiredDeviceInstanceExtensions.size() << " Device Extensions enabled:" << std::endl;
-    for (int i = 0; i < requiredDeviceInstanceExtensions.size(); i++) {
-        std::cout << "[VULKAN]   " << requiredDeviceInstanceExtensions[i] << std::endl;
+    std::cout << "[VULKAN] " << requiredDeviceExtensions.size() << " Device Extensions enabled:" << std::endl;
+    for (int i = 0; i < requiredDeviceExtensions.size(); i++) {
+        std::cout << "[VULKAN]   " << requiredDeviceExtensions[i] << std::endl;
     }
     
-    VkDeviceQueueCreateInfo queueCreateInfo{};
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    std::set<uint32_t> uniqueQueueFamilies = {indices[0].graphicsFamily.value(), indices[0].presentFamily.value()};
+
     float queuePriority = 1.0f;
-    queueCreateInfo.sType               = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex    = indices.graphicsFamily.value();;
-    queueCreateInfo.queueCount          = 1;
-    queueCreateInfo.pQueuePriorities    = &queuePriority;
+    for (uint32_t queueFamily : uniqueQueueFamilies) {
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+        queueCreateInfo.sType               = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex    = queueFamily;
+        queueCreateInfo.queueCount          = 1;
+        queueCreateInfo.pQueuePriorities    = &queuePriority;
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
 
     VkPhysicalDeviceFeatures deviceFeatures{};
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType                    = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.pQueueCreateInfos        = &queueCreateInfo;
-    createInfo.queueCreateInfoCount     = 1;
+    createInfo.queueCreateInfoCount     = static_cast<uint32_t>(queueCreateInfos.size());
+    createInfo.pQueueCreateInfos        = queueCreateInfos.data();
     createInfo.pEnabledFeatures         = &deviceFeatures;
-    createInfo.enabledExtensionCount    = static_cast<uint32_t>(requiredDeviceInstanceExtensions.size());
-    createInfo.ppEnabledExtensionNames  = requiredDeviceInstanceExtensions.data();
+    createInfo.enabledExtensionCount    = static_cast<uint32_t>(requiredDeviceExtensions.size());
+    createInfo.ppEnabledExtensionNames  = requiredDeviceExtensions.data();
     if (enableValidationLayers) {
         createInfo.enabledLayerCount    = static_cast<uint32_t>(requiredValidationLayers.size());
         createInfo.ppEnabledLayerNames  = requiredValidationLayers.data();
@@ -195,7 +215,8 @@ void Swiftcanon::createVulkanLogicalDevice()
 
     VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
     if (result == VK_SUCCESS) {
-        vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+        vkGetDeviceQueue(device, indices[0].graphicsFamily.value(), 0, &graphicsQueue);
+        vkGetDeviceQueue(device, indices[0].presentFamily.value(), 0, &presentQueue);
     }
     else {
         std::cerr << string_VkResult(result) << std::endl;
@@ -224,13 +245,28 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+    
+    VkBool32 presentSupport;
+    QueueFamilyIndices deviceIndices;
     for (int i = 0; i < queueFamilies.size(); i++) {
-        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            indices.graphicsFamily = i;
+        presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+        if(presentSupport && (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)){
+            deviceIndices.presentFamily = i;
+            deviceIndices.graphicsFamily = i;
             break;
         }
+        else{
+            if (presentSupport) {
+                deviceIndices.presentFamily = i;
+            }
+            if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                deviceIndices.graphicsFamily = i;
+            }
+        }
     }
-    if(indices.isComplete() == false){
+    
+    if(deviceIndices.isComplete() == false){
         score = 0;
     }
 
@@ -242,15 +278,18 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     deviceDetails.deviceIndex = deviceIndex;
     if (allDeviceDetails.size() == 0){
         allDeviceDetails.push_back(deviceDetails);
+        indices.push_back(deviceIndices);
     }
     else{
         for (int i = 0; i < allDeviceDetails.size(); i++) {
             if (score > allDeviceDetails[i].score){
                 allDeviceDetails.insert(allDeviceDetails.begin() + i, deviceDetails);
+                indices.insert(indices.begin() + i, deviceIndices);
                 break;
             }
             if (i == allDeviceDetails.size() - 1) {
                 allDeviceDetails.push_back(deviceDetails);
+                indices.push_back(deviceIndices);
                 break;
             }
         }
@@ -267,6 +306,7 @@ void Swiftcanon::mainLoop()
 void Swiftcanon::cleanup()
 {
     vkDestroyDevice(device, nullptr);
+    vkDestroySurfaceKHR(vkInstance, surface, nullptr);
     vkDestroyInstance(vkInstance, nullptr);
     glfwDestroyWindow(window);
     glfwTerminate();
