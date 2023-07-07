@@ -6,8 +6,9 @@
 
 struct DeviceDetails {
     const char* name;
-    int deviceIndex;
-    int score;
+    int         deviceIndex;
+    int         score;
+    uint32_t    extensionCount;
 };
 
 struct QueueFamilyIndices {
@@ -44,19 +45,25 @@ private:
     std::vector<const char*>        requiredVulkanExtensions;
     VkInstance                      vkInstance;
     std::vector<DeviceDetails>      allDeviceDetails;
+    std::vector<QueueFamilyIndices> allDeviceIndices;
+    DeviceDetails                   physicalDeviceDetails;
+    QueueFamilyIndices              physicalDeviceIndices;
     VkPhysicalDevice                physicalDevice = VK_NULL_HANDLE;
-    std::vector<QueueFamilyIndices> indices;
     std::vector<const char*>        requiredDeviceExtensions;
     VkDevice                        device;
     VkQueue                         graphicsQueue;
 
     // Vulkan Presentation Setup
     void createSurface();
+    void createSwapChain();
 
     // Vulkan Presentation Setup
     GLFWwindow*                     window;
     VkSurfaceKHR                    surface;
     VkQueue                         presentQueue;
+    VkSwapchainKHR                  swapChain;
+    std::vector<VkImage>            swapChainImages;
+    std::vector<VkImageView>        swapChainImageViews;
 
     // TODO: not best way to to this, should have like a global debug setup
     #ifdef NDEBUG
