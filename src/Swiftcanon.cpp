@@ -51,7 +51,7 @@ void Swiftcanon::initVulkan()
     createSurface();
     pickPhysicalGraphicsDevice();
     createVulkanLogicalDevice();
-    // createSwapChain();
+    createSwapChain();
 }
 
 void Swiftcanon::addVulkanValidationLayers()
@@ -239,6 +239,8 @@ void Swiftcanon::createSwapChain()
     VkPresentModeKHR presentMode;
     VkExtent2D extent;
 
+    std::cout << "[VULKAN] SwapChain:" << std::endl;
+
     // Get capabilities
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
     
@@ -246,18 +248,53 @@ void Swiftcanon::createSwapChain()
     uint32_t formatCount;
     std::vector<VkSurfaceFormatKHR> availableFormats;
     vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+    std::cout << "[VULKAN]   " << formatCount << " Formats available" << std::endl;
     if (formatCount != 0) {
         availableFormats.resize(formatCount);
         vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, availableFormats.data());
+    }
+    // Pick a suitable surfaceFormat, TODO: rank the best and then choose the best available
+    for (const VkSurfaceFormatKHR& availableFormat : availableFormats) {
+        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            surfaceFormat = availableFormat;
+            break;
+        }
     }
 
     // Get presentModes
     uint32_t presentModeCount;
     std::vector<VkPresentModeKHR> availablePresentModes;
     vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
+    std::cout << "[VULKAN]   " << presentModeCount << " Present Modes available" << std::endl;
     if (presentModeCount != 0) {
         availablePresentModes.resize(presentModeCount);
         vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, availablePresentModes.data());
+    }
+    // Pick a suitable presentMode, TODO: rank the best and then choose the best available, this should also be user selectable
+    presentMode = VK_PRESENT_MODE_FIFO_KHR; // Will always be present
+    for (const VkPresentModeKHR& availablePresentMode : availablePresentModes) {
+        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+            presentMode = availablePresentMode;
+            break;
+        }
+    }
+
+    // Get Swap Extent
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        extent = capabilities.currentExtent;
+    }
+    else{
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+
+        VkExtent2D actualExtent = {
+            static_cast<uint32_t>(width),
+            static_cast<uint32_t>(height)
+        };
+        actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+        actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+        
+        extent = actualExtent;
     }
 
     uint32_t imageCount = capabilities.minImageCount + 1;
@@ -301,7 +338,7 @@ void Swiftcanon::createSwapChain()
     }
     else {
         std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create logical device");
+        throw std::runtime_error("[VULKAN] Failed to create swap chain");
     }
 }
 
