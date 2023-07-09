@@ -56,6 +56,7 @@ private:
     // Vulkan Presentation Setup
     void createSurface();
     void createSwapChain();
+    void createImageViews();
 
     // Vulkan Presentation Setup
     GLFWwindow*                     window;
@@ -63,6 +64,8 @@ private:
     VkQueue                         presentQueue;
     VkSwapchainKHR                  swapChain;
     std::vector<VkImage>            swapChainImages;
+    VkFormat                        swapChainImageFormat;
+    VkExtent2D                      swapChainExtent;
     std::vector<VkImageView>        swapChainImageViews;
 
     // TODO: not best way to to this, should have like a global debug setup

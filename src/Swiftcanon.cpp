@@ -52,6 +52,7 @@ void Swiftcanon::initVulkan()
     pickPhysicalGraphicsDevice();
     createVulkanLogicalDevice();
     createSwapChain();
+    createImageViews();
 }
 
 void Swiftcanon::addVulkanValidationLayers()
@@ -73,7 +74,7 @@ void Swiftcanon::addVulkanValidationLayers()
     }
     if (enableValidationLayers) {
         if (layerFound) {
-            std::cout << "[VULKAN] Adding Validation Layers:" << std::endl;
+            std::cout << "[VULKAN] Enabling Validation Layers:" << std::endl;
             for (uint32_t i = 0; i < requiredValidationLayers.size(); i++) {
                 std::cout << "[VULKAN]   " << requiredValidationLayers.data()[i] << std::endl;
             }
@@ -260,6 +261,7 @@ void Swiftcanon::createSwapChain()
             break;
         }
     }
+    swapChainImageFormat = surfaceFormat.format;
 
     // Get presentModes
     uint32_t presentModeCount;
@@ -296,6 +298,7 @@ void Swiftcanon::createSwapChain()
         
         extent = actualExtent;
     }
+    swapChainExtent = extent;
 
     uint32_t imageCount = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
@@ -342,6 +345,33 @@ void Swiftcanon::createSwapChain()
     }
 }
 
+void Swiftcanon::createImageViews()
+{
+    swapChainImageViews.resize(swapChainImages.size());
+    for (size_t i = 0; i < swapChainImages.size(); i++) {
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType                            = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image                            = swapChainImages[i];
+        createInfo.viewType                         = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format                           = swapChainImageFormat;
+        createInfo.components.r                     = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g                     = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b                     = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a                     = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.subresourceRange.aspectMask      = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel    = 0;
+        createInfo.subresourceRange.levelCount      = 1;
+        createInfo.subresourceRange.baseArrayLayer  = 0;
+        createInfo.subresourceRange.layerCount      = 1;
+
+        VkResult result = vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]);
+        if (result != VK_SUCCESS) {
+            std::cerr << string_VkResult(result) << std::endl;
+            throw std::runtime_error("[VULKAN] Failed to create swap chain image views");
+        }
+    }
+}
+
 // TODO: Massively improve scoring factors to better score the GPUs
 void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int deviceIndex)
 {
@@ -375,7 +405,7 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     // Maximum possible size of textures affects graphics quality
     deviceDetails.score += deviceProperties.limits.maxImageDimension2D;
 
-    // Check if device suports required extensions
+    // Check if device supports required extensions
     int supportedExtensions = 0;
     for (const char* requiredDeviceExtension : requiredDeviceExtensions) {
         for (VkExtensionProperties extension : availableDeviceExtensions) {
@@ -390,7 +420,7 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
         std::cout << "[VULKAN] WARNING: Physical Device " << deviceDetails.name << " does not support required Vulkan Extensions, setting score to 0" << std::endl;
     }
     
-    // Check if device suports required queues
+    // Check if device supports required queues
     VkBool32 presentSupport;
     QueueFamilyIndices deviceIndices;
     for (int i = 0; i < queueFamilies.size(); i++) {
@@ -445,6 +475,9 @@ void Swiftcanon::mainLoop()
 
 void Swiftcanon::cleanup()
 {
+for (VkImageView imageView : swapChainImageViews) {
+    vkDestroyImageView(device, imageView, nullptr);
+}
     vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroyDevice(device, nullptr);
     vkDestroySurfaceKHR(vkInstance, surface, nullptr);
