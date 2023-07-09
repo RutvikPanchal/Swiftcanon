@@ -59,6 +59,8 @@ void Swiftcanon::initVulkan()
     createGraphicsPipeline();
     createFramebuffers();
     createCommandPool();
+    createCommandBuffer();
+    createSyncObjects();
 }
 
 void Swiftcanon::addVulkanValidationLayers()
@@ -597,6 +599,21 @@ void Swiftcanon::createCommandPool()
     }
 }
 
+void Swiftcanon::createCommandBuffer()
+{
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType                 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool           = commandPool;
+    allocInfo.level                 = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount    = 1;
+
+    VkResult result = vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to create CommandBuffer");
+    }
+}
+
 // TODO: Massively improve scoring factors to better score the GPUs
 void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int deviceIndex)
 {
@@ -690,6 +707,78 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     }
 }
 
+void Swiftcanon::recordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index)
+{
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType             = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags             = 0;        // Optional
+    beginInfo.pInheritanceInfo  = nullptr;  // Optional
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    VkClearValue clearColor             = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassInfo.sType                = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass           = renderPass;
+    renderPassInfo.framebuffer          = swapChainFramebuffers[image_index];
+    renderPassInfo.renderArea.offset    = {0, 0};
+    renderPassInfo.renderArea.extent    = swapChainExtent;
+    renderPassInfo.clearValueCount      = 1;
+    renderPassInfo.pClearValues         = &clearColor;
+
+    VkViewport viewport{};
+    viewport.x          = 0.0f;
+    viewport.y          = 0.0f;
+    viewport.width      = static_cast<float>(swapChainExtent.width);
+    viewport.height     = static_cast<float>(swapChainExtent.height);
+    viewport.minDepth   = 0.0f;
+    viewport.maxDepth   = 1.0f;
+
+    VkRect2D scissor{};
+    scissor.offset      = {0, 0};
+    scissor.extent      = swapChainExtent;
+
+    VkResult result = vkBeginCommandBuffer(command_buffer, &beginInfo);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to initialize recording CommandBuffer");
+    }
+    vkCmdBeginRenderPass(command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    vkCmdEndRenderPass(command_buffer);
+    result = vkEndCommandBuffer(command_buffer);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to record CommandBuffer");
+    }
+}
+
+void Swiftcanon::createSyncObjects()
+{
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+    VkResult result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to create Semaphore");
+    }
+    result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to create Semaphore");
+    }
+    result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to create Fence");
+    }
+}
+
 VkShaderModule Swiftcanon::createShaderModule(const std::vector<char>& code)
 {
     VkShaderModuleCreateInfo createInfo{};
@@ -725,15 +814,22 @@ std::vector<char> Swiftcanon::readFile(const std::string& filename) {
     return buffer;
 }
 
+void Swiftcanon::drawFrame()
+{ }
+
 void Swiftcanon::mainLoop()
 {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+        drawFrame();
     }
 }
 
 void Swiftcanon::cleanup()
 {
+    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
+    vkDestroyFence(device, inFlightFence, nullptr);
     vkDestroyCommandPool(device, commandPool, nullptr);
 for (VkFramebuffer framebuffer : swapChainFramebuffers) {
     vkDestroyFramebuffer(device, framebuffer, nullptr);

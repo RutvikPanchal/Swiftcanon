@@ -74,6 +74,10 @@ private:
     void createRenderPass();
     void createGraphicsPipeline();
     void createCommandPool();
+    void createCommandBuffer();
+    void createSyncObjects();
+    void drawFrame();
+    void recordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index);
     VkShaderModule createShaderModule(const std::vector<char>& code);
 
     // Vulkan Pipeline Setup
@@ -81,6 +85,10 @@ private:
     VkPipelineLayout                pipelineLayout;
     VkPipeline                      graphicsPipeline;
     VkCommandPool                   commandPool;
+    VkCommandBuffer                 commandBuffer;
+    VkSemaphore                     imageAvailableSemaphore;
+    VkSemaphore                     renderFinishedSemaphore;
+    VkFence                         inFlightFence;
 
     // UTIL
     std::vector<char> readFile(const std::string& filename);
