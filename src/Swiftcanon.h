@@ -57,6 +57,7 @@ private:
     void createSurface();
     void createSwapChain();
     void createImageViews();
+    void createFramebuffers();
 
     // Vulkan Presentation Setup
     GLFWwindow*                     window;
@@ -67,16 +68,19 @@ private:
     VkFormat                        swapChainImageFormat;
     VkExtent2D                      swapChainExtent;
     std::vector<VkImageView>        swapChainImageViews;
+    std::vector<VkFramebuffer>      swapChainFramebuffers;
 
     // Vulkan Pipeline Setup
     void createRenderPass();
     void createGraphicsPipeline();
+    void createCommandPool();
     VkShaderModule createShaderModule(const std::vector<char>& code);
 
     // Vulkan Pipeline Setup
     VkRenderPass                    renderPass;
     VkPipelineLayout                pipelineLayout;
     VkPipeline                      graphicsPipeline;
+    VkCommandPool                   commandPool;
 
     // UTIL
     std::vector<char> readFile(const std::string& filename);

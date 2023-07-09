@@ -57,6 +57,8 @@ void Swiftcanon::initVulkan()
     createImageViews();
     createRenderPass();
     createGraphicsPipeline();
+    createFramebuffers();
+    createCommandPool();
 }
 
 void Swiftcanon::addVulkanValidationLayers()
@@ -233,7 +235,7 @@ void Swiftcanon::createVulkanLogicalDevice()
     }
     else {
         std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create logical device");
+        throw std::runtime_error("[VULKAN] Failed to create Logical Device");
     }
 }
 
@@ -345,7 +347,7 @@ void Swiftcanon::createSwapChain()
     }
     else {
         std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create swap chain");
+        throw std::runtime_error("[VULKAN] Failed to create SwapChain");
     }
 }
 
@@ -371,7 +373,7 @@ void Swiftcanon::createImageViews()
         VkResult result = vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]);
         if (result != VK_SUCCESS) {
             std::cerr << string_VkResult(result) << std::endl;
-            throw std::runtime_error("[VULKAN] Failed to create swap chain image views");
+            throw std::runtime_error("[VULKAN] Failed to create SwapChain ImageViews");
         }
     }
 }
@@ -491,8 +493,8 @@ void Swiftcanon::createGraphicsPipeline()
     multisampling.sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable   = VK_FALSE;
     multisampling.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
-    multisampling.minSampleShading      = 1.0f; // Optional
-    multisampling.pSampleMask           = nullptr; // Optional
+    multisampling.minSampleShading      = 1.0f;     // Optional
+    multisampling.pSampleMask           = nullptr;  // Optional
     multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
     multisampling.alphaToOneEnable      = VK_FALSE; // Optional
 
@@ -524,9 +526,7 @@ void Swiftcanon::createGraphicsPipeline()
     pipelineLayoutInfo.pushConstantRangeCount   = 0;        // Optional
     pipelineLayoutInfo.pPushConstantRanges      = nullptr;  // Optional
 
-    VkResult result;
-
-    result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
+    VkResult result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Pipeline Layout");
@@ -560,6 +560,43 @@ void Swiftcanon::createGraphicsPipeline()
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
 }
 
+void Swiftcanon::createFramebuffers()
+{
+    swapChainFramebuffers.resize(swapChainImageViews.size());
+    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+        VkImageView attachments[] = { swapChainImageViews[i] };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = renderPass;
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.width = swapChainExtent.width;
+        framebufferInfo.height = swapChainExtent.height;
+        framebufferInfo.layers = 1;
+
+        VkResult result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]);
+        if (result != VK_SUCCESS) {
+            std::cerr << string_VkResult(result) << std::endl;
+            throw std::runtime_error("[VULKAN] Failed to create Framebuffer");
+        }
+    }
+}
+
+void Swiftcanon::createCommandPool()
+{
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags              = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex   = physicalDeviceIndices.graphicsFamily.value();
+
+    VkResult result = vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to create CommandPool");
+    }
+}
+
 // TODO: Massively improve scoring factors to better score the GPUs
 void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int deviceIndex)
 {
@@ -579,9 +616,8 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
     DeviceDetails deviceDetails;
-    char* str = new char[strlen(deviceProperties.deviceName)];
-    strcpy(str, deviceProperties.deviceName);
-    deviceDetails.name = str;
+    std::string* string = new std::string(deviceProperties.deviceName);
+    deviceDetails.name = string->c_str();
     deviceDetails.score = 0;
     deviceDetails.deviceIndex = deviceIndex;
     deviceDetails.extensionCount = deviceExtensionCount;
@@ -668,7 +704,7 @@ VkShaderModule Swiftcanon::createShaderModule(const std::vector<char>& code)
     }
     else {
         std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to Shader Module");
+        throw std::runtime_error("[VULKAN] Failed to create Shader Module");
     }
 }
 
@@ -698,6 +734,10 @@ void Swiftcanon::mainLoop()
 
 void Swiftcanon::cleanup()
 {
+    vkDestroyCommandPool(device, commandPool, nullptr);
+for (VkFramebuffer framebuffer : swapChainFramebuffers) {
+    vkDestroyFramebuffer(device, framebuffer, nullptr);
+}
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
