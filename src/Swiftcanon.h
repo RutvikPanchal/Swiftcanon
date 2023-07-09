@@ -68,6 +68,19 @@ private:
     VkExtent2D                      swapChainExtent;
     std::vector<VkImageView>        swapChainImageViews;
 
+    // Vulkan Pipeline Setup
+    void createRenderPass();
+    void createGraphicsPipeline();
+    VkShaderModule createShaderModule(const std::vector<char>& code);
+
+    // Vulkan Pipeline Setup
+    VkRenderPass                    renderPass;
+    VkPipelineLayout                pipelineLayout;
+    VkPipeline                      graphicsPipeline;
+
+    // UTIL
+    std::vector<char> readFile(const std::string& filename);
+
     // TODO: not best way to to this, should have like a global debug setup
     #ifdef NDEBUG
         const bool enableValidationLayers = false;
