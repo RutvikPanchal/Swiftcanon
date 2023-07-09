@@ -401,12 +401,23 @@ void Swiftcanon::createRenderPass()
     subpass.colorAttachmentCount    = 1;
     subpass.pColorAttachments       = &colorAttachmentRef;
 
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass       = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass       = 0;
+    dependency.srcStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask    = 0;
+    dependency.dstStageMask     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask    = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType            = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount  = 1;
     renderPassInfo.pAttachments     = &colorAttachment;
     renderPassInfo.subpassCount     = 1;
     renderPassInfo.pSubpasses       = &subpass;
+    renderPassInfo.dependencyCount  = 1;
+    renderPassInfo.pDependencies    = &dependency;
+
 
     VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
     if (result != VK_SUCCESS) {
@@ -761,6 +772,7 @@ void Swiftcanon::createSyncObjects()
 
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     VkResult result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore);
     if (result != VK_SUCCESS) {
@@ -815,7 +827,47 @@ std::vector<char> Swiftcanon::readFile(const std::string& filename) {
 }
 
 void Swiftcanon::drawFrame()
-{ }
+{
+    uint32_t imageIndex;
+    vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(device, 1, &inFlightFence);
+    vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    vkResetCommandBuffer(commandBuffer, 0);
+    recordCommandBuffer(commandBuffer, imageIndex);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[]        = {imageAvailableSemaphore};
+    VkPipelineStageFlags waitStages[]   = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount       = 1;
+    submitInfo.pWaitSemaphores          = waitSemaphores;
+    submitInfo.pWaitDstStageMask        = waitStages;
+    submitInfo.commandBufferCount       = 1;
+    submitInfo.pCommandBuffers          = &commandBuffer;
+
+    VkSemaphore signalSemaphores[]  = {renderFinishedSemaphore};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores    = signalSemaphores;
+    
+    VkResult result = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFence);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to submit Draw CommandBuffer");
+    }
+
+    VkPresentInfoKHR presentInfo{};
+    VkSwapchainKHR swapChains[]     = {swapChain};
+    presentInfo.sType               = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount  = 1;
+    presentInfo.pWaitSemaphores     = signalSemaphores;
+    presentInfo.swapchainCount      = 1;
+    presentInfo.pSwapchains         = swapChains;
+    presentInfo.pImageIndices       = &imageIndex;
+    presentInfo.pResults            = nullptr;  // Optional
+
+    vkQueuePresentKHR(presentQueue, &presentInfo);
+}
 
 void Swiftcanon::mainLoop()
 {
@@ -823,6 +875,7 @@ void Swiftcanon::mainLoop()
         glfwPollEvents();
         drawFrame();
     }
+    vkDeviceWaitIdle(device);
 }
 
 void Swiftcanon::cleanup()
