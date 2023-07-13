@@ -4,15 +4,30 @@ Rendering Engine
 Prerequisites:
 - Git Client
 - CMake 3.14 or greater
-- Visual Studio / XCode / GCC
+- Visual Studio / VSCode / XCode / GCC
 - VulkanSDK
 
+`NOTE: On MacOS, run: source ~/VulkanSDK/<VulkanVersion>/setup-env.sh`
+
+`git clone --recursive https://github.com/RutvikPanchal/Swiftcanon.git`
+
+## VSCode Intellisense config
+- Install C/C++ VSCode Extension
+- Run ./_package.sh
+- Reload VSCode Window and Click on Yes on the C++ Extension notification that pops up asking to configure using /build/compile_commands.json
+
+## Windows:
+
 ```
-Step 1: git clone --recursive https://github.com/RutvikPanchal/Swiftcanon.git
-Step 2: cd Switfcanon
-Step 3: cmake -S . -B ./build
+Step 1: cmake -S . -B ./build
+Step 2: Open the solution file (in build folder) to launch Visual Studio and the project is ready to run
 ```
 
-Windows:
+## Linux / MacOS:
 
-Open the solution file in build folder and the project is ready to run
+```
+Step 1: ./_package_debug.sh
+  or
+Step 1: ./_package_release.sh
+Step 2: ./build/Swiftcanon
+```

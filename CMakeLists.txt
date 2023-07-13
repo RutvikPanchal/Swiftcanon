@@ -19,6 +19,17 @@ if (CMAKE_VERSION VERSION_GREATER 3.12)
 endif()
 
 if (MSVC)
-    # Set Swiftcanon as the Default Project
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+  # Set Swiftcanon as the Default Project
+  set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 endif(MSVC)
+
+if(WIN32)
+  # for Windows OS in general
+  add_definitions(-DWIN32)
+elseif(APPLE)
+  # for MacOS X or iOS, watchOS, tvOS (since 3.10.3)
+  add_definitions(-DAPPLE)
+elseif(UNIX AND NOT APPLE)
+  # for Linux, BSD, Solaris, Minix
+  add_definitions(-DUNIX)
+endif()

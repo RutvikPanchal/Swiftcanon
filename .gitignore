@@ -26,6 +26,9 @@
 *.a
 *.lib
 
+# Compiled Shaders
+*.spv
+
 # Executables
 *.exe
 *.out
@@ -46,3 +49,6 @@ _deps
 
 #CMake build folder
 build/
+
+#VSCode
+.vscode

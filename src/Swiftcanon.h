@@ -1,0 +1,110 @@
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
+#include <vector>
+#include <string>
+#include <optional>
+
+struct DeviceDetails {
+    const char* name;
+    int         deviceIndex;
+    int         score;
+    uint32_t    extensionCount;
+};
+
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+    std::optional<uint32_t> presentFamily;
+    bool isComplete() {
+        return graphicsFamily.has_value() && presentFamily.has_value();
+    }
+};
+
+class Swiftcanon
+{
+public:
+    Swiftcanon();
+    void run();
+    void init();
+
+    // TODO: This doesn't seem like a good implementation
+    bool framebufferResized = false;
+
+private:
+    void initWindow();
+    void initVulkan();
+    void mainLoop();
+    void cleanup();
+
+    // Vulkan Compute Setup
+    void addVulkanValidationLayers();
+    void addVulkanInstanceExtensions();
+    void createVulkanInstance();
+    void pickPhysicalGraphicsDevice();
+    void createVulkanLogicalDevice();
+    void ratePhysicalGraphicsDevices(VkPhysicalDevice device, int deviceIndex);
+
+    // Vulkan Compute Setup
+    std::vector<const char*> const  requiredValidationLayers;
+    std::vector<const char*>        requiredVulkanExtensions;
+    VkInstance                      vkInstance;
+    std::vector<DeviceDetails>      allDeviceDetails;
+    std::vector<QueueFamilyIndices> allDeviceIndices;
+    DeviceDetails                   physicalDeviceDetails;
+    QueueFamilyIndices              physicalDeviceIndices;
+    VkPhysicalDevice                physicalDevice = VK_NULL_HANDLE;
+    std::vector<const char*>        requiredDeviceExtensions;
+    VkDevice                        device;
+    VkQueue                         graphicsQueue;
+
+    // Vulkan Presentation Setup
+    void createSurface();
+    void createSwapChain();
+    void recreateSwapChain();
+    void cleanupSwapChain();
+    void createImageViews();
+    void createFramebuffers();
+
+    // Vulkan Presentation Setup
+    GLFWwindow*                     window;
+    VkSurfaceKHR                    surface;
+    VkQueue                         presentQueue;
+    VkSwapchainKHR                  swapChain;
+    std::vector<VkImage>            swapChainImages;
+    VkFormat                        swapChainImageFormat;
+    VkExtent2D                      swapChainExtent;
+    std::vector<VkImageView>        swapChainImageViews;
+    std::vector<VkFramebuffer>      swapChainFramebuffers;
+
+    // Vulkan Pipeline Setup
+    void createRenderPass();
+    void createGraphicsPipeline();
+    void createCommandPool();
+    void createCommandBuffer();
+    void createSyncObjects();
+    void drawFrame();
+    void recordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index);
+    VkShaderModule createShaderModule(const std::vector<char>& code);
+
+    // Vulkan Pipeline Setup
+    VkRenderPass                    renderPass;
+    VkPipelineLayout                pipelineLayout;
+    VkPipeline                      graphicsPipeline;
+    VkCommandPool                   commandPool;
+    std::vector<VkCommandBuffer>    commandBuffers;
+    std::vector<VkSemaphore>        imageAvailableSemaphores;
+    std::vector<VkSemaphore>        renderFinishedSemaphores;
+    std::vector<VkFence>            inFlightFences;
+    const int                       MAX_FRAMES_IN_FLIGHT        = 2;
+    uint32_t                        currentFrame                = 0;
+
+    // UTIL
+    std::vector<char> readFile(const std::string& filename);
+
+    // TODO: not best way to to this, should have like a global debug setup
+    #ifdef NDEBUG
+        const bool enableValidationLayers = false;
+    #else
+        const bool enableValidationLayers = true;
+    #endif
+};
