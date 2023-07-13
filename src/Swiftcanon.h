@@ -27,6 +27,9 @@ public:
     void run();
     void init();
 
+    // TODO: This doesn't seem like a good implementation
+    bool framebufferResized = false;
+
 private:
     void initWindow();
     void initVulkan();
@@ -57,6 +60,8 @@ private:
     // Vulkan Presentation Setup
     void createSurface();
     void createSwapChain();
+    void recreateSwapChain();
+    void cleanupSwapChain();
     void createImageViews();
     void createFramebuffers();
 
@@ -86,10 +91,12 @@ private:
     VkPipelineLayout                pipelineLayout;
     VkPipeline                      graphicsPipeline;
     VkCommandPool                   commandPool;
-    VkCommandBuffer                 commandBuffer;
-    VkSemaphore                     imageAvailableSemaphore;
-    VkSemaphore                     renderFinishedSemaphore;
-    VkFence                         inFlightFence;
+    std::vector<VkCommandBuffer>    commandBuffers;
+    std::vector<VkSemaphore>        imageAvailableSemaphores;
+    std::vector<VkSemaphore>        renderFinishedSemaphores;
+    std::vector<VkFence>            inFlightFences;
+    const int                       MAX_FRAMES_IN_FLIGHT        = 2;
+    uint32_t                        currentFrame                = 0;
 
     // UTIL
     std::vector<char> readFile(const std::string& filename);

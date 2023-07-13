@@ -36,12 +36,18 @@ void Swiftcanon::run()
     cleanup();
 }
 
+static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+    Swiftcanon* app = reinterpret_cast<Swiftcanon*>(glfwGetWindowUserPointer(window));
+    app->framebufferResized = true;
+}
+
 void Swiftcanon::initWindow()
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     window = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     std::cout << "[GLFW] Vulkan Window Created" << std::endl;
 }
 
@@ -83,7 +89,7 @@ void Swiftcanon::addVulkanValidationLayers()
     if (enableValidationLayers) {
         if (layerFound) {
             std::cout << "[VULKAN] Enabling Validation Layers:" << std::endl;
-            for (uint32_t i = 0; i < requiredValidationLayers.size(); i++) {
+            for (size_t i = 0; i < requiredValidationLayers.size(); i++) {
                 std::cout << "[VULKAN]   " << requiredValidationLayers.data()[i] << std::endl;
             }
         }
@@ -101,12 +107,12 @@ void Swiftcanon::addVulkanInstanceExtensions()
 
     uint32_t requiredExtensionCount;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&requiredExtensionCount);
-    for(uint32_t i = 0; i < requiredExtensionCount; i++) {
+    for (size_t i = 0; i < requiredExtensionCount; i++) {
         requiredVulkanExtensions.push_back(glfwExtensions[i]);
     }
     std::cout << "[VULKAN] " << requiredVulkanExtensions.size() << " Vulkan Instance Extensions enabled:" << std::endl;
 
-    for(uint32_t i = 0; i < requiredVulkanExtensions.size(); i++) {
+    for (size_t i = 0; i < requiredVulkanExtensions.size(); i++) {
         std::cout << "[VULKAN]   " << requiredVulkanExtensions[i] << std::endl;
     }
 }
@@ -162,7 +168,7 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
 
         // TODO: Improve log formatting
         std::cout << "[VULKAN] " << deviceCount << " Physical Graphics Devices Found: " << std::endl;
-        for (int i = 0; i < allDeviceDetails.size(); i++) {
+        for (size_t i = 0; i < allDeviceDetails.size(); i++) {
             if (i == 0) {
                 std::cout << "[VULKAN]   * " << allDeviceDetails[i].name << ", score: " << allDeviceDetails[i].score << std::endl;
             }
@@ -196,7 +202,7 @@ void Swiftcanon::createVulkanLogicalDevice()
     std::cout << "[VULKAN] " << physicalDeviceDetails.extensionCount << " Device Extensions available" << std::endl;
 
     std::cout << "[VULKAN] " << requiredDeviceExtensions.size() << " Device Extensions enabled:" << std::endl;
-    for (int i = 0; i < requiredDeviceExtensions.size(); i++) {
+    for (size_t i = 0; i < requiredDeviceExtensions.size(); i++) {
         std::cout << "[VULKAN]   " << requiredDeviceExtensions[i] << std::endl;
     }
 
@@ -353,6 +359,35 @@ void Swiftcanon::createSwapChain()
     }
 }
 
+void Swiftcanon::recreateSwapChain()
+{
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    vkDeviceWaitIdle(device);
+    
+    cleanupSwapChain();
+
+    createSwapChain();
+    createImageViews();
+    createFramebuffers();
+}
+
+void Swiftcanon::cleanupSwapChain()
+{
+    for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
+        vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+    }
+    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+        vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+    }
+    vkDestroySwapchainKHR(device, swapChain, nullptr);
+}
+
 void Swiftcanon::createImageViews()
 {
     swapChainImageViews.resize(swapChainImages.size());
@@ -428,8 +463,8 @@ void Swiftcanon::createRenderPass()
 
 void Swiftcanon::createGraphicsPipeline()
 {
-    std::vector<char> vertShaderCode = readFile("src/shaders/compiled/vert.spv");
-    std::vector<char> fragShaderCode = readFile("src/shaders/compiled/frag.spv");
+    std::vector<char> vertShaderCode = readFile("../src/shaders/compiled/vert.spv");
+    std::vector<char> fragShaderCode = readFile("../src/shaders/compiled/frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -612,13 +647,15 @@ void Swiftcanon::createCommandPool()
 
 void Swiftcanon::createCommandBuffer()
 {
+    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType                 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool           = commandPool;
     allocInfo.level                 = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount    = 1;
+    allocInfo.commandBufferCount    = static_cast<uint32_t>(commandBuffers.size());
 
-    VkResult result = vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+    VkResult result = vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data());
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create CommandBuffer");
@@ -675,7 +712,7 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     // Check if device supports required queues
     VkBool32 presentSupport;
     QueueFamilyIndices deviceIndices;
-    for (int i = 0; i < queueFamilies.size(); i++) {
+    for (uint32_t i = 0; i < queueFamilies.size(); i++) {
         presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
         if(presentSupport && (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)){
@@ -703,7 +740,7 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
         allDeviceIndices.push_back(deviceIndices);
     }
     else{
-        for (int i = 0; i < allDeviceDetails.size(); i++) {
+        for (size_t i = 0; i < allDeviceDetails.size(); i++) {
             if (deviceDetails.score > allDeviceDetails[i].score){
                 allDeviceDetails.insert(allDeviceDetails.begin() + i, deviceDetails);
                 allDeviceIndices.insert(allDeviceIndices.begin() + i, deviceIndices);
@@ -767,6 +804,10 @@ void Swiftcanon::recordCommandBuffer(VkCommandBuffer command_buffer, uint32_t im
 
 void Swiftcanon::createSyncObjects()
 {
+    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -774,20 +815,22 @@ void Swiftcanon::createSyncObjects()
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    VkResult result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore);
-    if (result != VK_SUCCESS) {
-        std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create Semaphore");
-    }
-    result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
-    if (result != VK_SUCCESS) {
-        std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create Semaphore");
-    }
-    result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence);
-    if (result != VK_SUCCESS) {
-        std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create Fence");
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        VkResult result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]);
+        if (result != VK_SUCCESS) {
+            std::cerr << string_VkResult(result) << std::endl;
+            throw std::runtime_error("[VULKAN] Failed to create Semaphore");
+        }
+        result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]);
+        if (result != VK_SUCCESS) {
+            std::cerr << string_VkResult(result) << std::endl;
+            throw std::runtime_error("[VULKAN] Failed to create Semaphore");
+        }
+        result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]);
+        if (result != VK_SUCCESS) {
+            std::cerr << string_VkResult(result) << std::endl;
+            throw std::runtime_error("[VULKAN] Failed to create Fence");
+        }
     }
 }
 
@@ -826,49 +869,6 @@ std::vector<char> Swiftcanon::readFile(const std::string& filename) {
     return buffer;
 }
 
-void Swiftcanon::drawFrame()
-{
-    uint32_t imageIndex;
-    vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(device, 1, &inFlightFence);
-    vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-    vkResetCommandBuffer(commandBuffer, 0);
-    recordCommandBuffer(commandBuffer, imageIndex);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    VkSemaphore waitSemaphores[]        = {imageAvailableSemaphore};
-    VkPipelineStageFlags waitStages[]   = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submitInfo.waitSemaphoreCount       = 1;
-    submitInfo.pWaitSemaphores          = waitSemaphores;
-    submitInfo.pWaitDstStageMask        = waitStages;
-    submitInfo.commandBufferCount       = 1;
-    submitInfo.pCommandBuffers          = &commandBuffer;
-
-    VkSemaphore signalSemaphores[]  = {renderFinishedSemaphore};
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores    = signalSemaphores;
-    
-    VkResult result = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFence);
-    if (result != VK_SUCCESS) {
-        std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to submit Draw CommandBuffer");
-    }
-
-    VkPresentInfoKHR presentInfo{};
-    VkSwapchainKHR swapChains[]     = {swapChain};
-    presentInfo.sType               = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount  = 1;
-    presentInfo.pWaitSemaphores     = signalSemaphores;
-    presentInfo.swapchainCount      = 1;
-    presentInfo.pSwapchains         = swapChains;
-    presentInfo.pImageIndices       = &imageIndex;
-    presentInfo.pResults            = nullptr;  // Optional
-
-    vkQueuePresentKHR(presentQueue, &presentInfo);
-}
-
 void Swiftcanon::mainLoop()
 {
     while (!glfwWindowShouldClose(window)) {
@@ -878,22 +878,81 @@ void Swiftcanon::mainLoop()
     vkDeviceWaitIdle(device);
 }
 
+void Swiftcanon::drawFrame()
+{
+    uint32_t imageIndex;
+    vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    
+    VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        recreateSwapChain();
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("[Vulkan] Failed to acquire SwapChain Image");
+    }
+
+    vkResetFences(device, 1, &inFlightFences[currentFrame]);
+    vkResetCommandBuffer(commandBuffers[currentFrame], 0);
+    recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
+
+    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    result = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
+    if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
+        throw std::runtime_error("[VULKAN] Failed to submit Draw CommandBuffer");
+    }
+
+    VkPresentInfoKHR presentInfo{};
+    VkSwapchainKHR swapChains[] = { swapChain };
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr;  // Optional
+
+    result = vkQueuePresentKHR(presentQueue, &presentInfo);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+        std::cout << "[Vulkan] Recreating SwapChain" << std::endl;
+        framebufferResized = false;
+        recreateSwapChain();
+    }
+    else if (result != VK_SUCCESS) {
+        throw std::runtime_error("[VULKAN] Failed to present SwapChain Image");
+    }
+
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
 void Swiftcanon::cleanup()
 {
-    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-    vkDestroyFence(device, inFlightFence, nullptr);
-    vkDestroyCommandPool(device, commandPool, nullptr);
-for (VkFramebuffer framebuffer : swapChainFramebuffers) {
-    vkDestroyFramebuffer(device, framebuffer, nullptr);
+    cleanupSwapChain();
+for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+    vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+    vkDestroyFence(device, inFlightFences[i], nullptr);
 }
+    vkDestroyCommandPool(device, commandPool, nullptr);
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
-for (VkImageView imageView : swapChainImageViews) {
-    vkDestroyImageView(device, imageView, nullptr);
-}
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
+    
     vkDestroyDevice(device, nullptr);
     vkDestroySurfaceKHR(vkInstance, surface, nullptr);
     vkDestroyInstance(vkInstance, nullptr);
