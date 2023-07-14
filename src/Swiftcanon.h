@@ -1,11 +1,21 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <array>
 #include <vector>
 #include <string>
 #include <optional>
+
+struct UniformBufferObject {
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
+};
 
 struct Vertex {
     glm::vec2 pos;
@@ -106,19 +116,26 @@ private:
 
     // Vulkan Pipeline Setup
     void createRenderPass();
+    void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createCommandPool();
+    void createDescriptorPool();
+    void createDescriptorSets();
     void createCommandBuffer();
     void createSyncObjects();
     void drawFrame();
+    void updateUniformBuffer(uint32_t currentImage);
     void recordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index);
     VkShaderModule createShaderModule(const std::vector<char>& code);
 
     // Vulkan Pipeline Setup
     VkRenderPass                    renderPass;
+    VkDescriptorSetLayout           descriptorSetLayout;
     VkPipelineLayout                pipelineLayout;
     VkPipeline                      graphicsPipeline;
     VkCommandPool                   commandPool;
+    VkDescriptorPool                descriptorPool;
+    std::vector<VkDescriptorSet>    descriptorSets;
     std::vector<VkCommandBuffer>    commandBuffers;
     std::vector<VkSemaphore>        imageAvailableSemaphores;
     std::vector<VkSemaphore>        renderFinishedSemaphores;
@@ -140,10 +157,14 @@ private:
     VkDeviceMemory                  vertexBufferMemory;
     VkBuffer                        indexBuffer;
     VkDeviceMemory                  indexBufferMemory;
+    std::vector<VkBuffer>           uniformBuffers;
+    std::vector<VkDeviceMemory>     uniformBuffersMemory;
+    std::vector<void*>              uniformBuffersMapped;
 
     // Shaders Setup
     void createVertexBuffer();
     void createIndexBuffer();
+    void createUniformBuffers();
 
     // Vulkan Helper Functions
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
