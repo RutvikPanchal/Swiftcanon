@@ -148,21 +148,8 @@ private:
     uint32_t                        currentFrame                = 0;
 
     // Shaders Setup
-    const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}},
-
-        {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}}
-    };
-    const std::vector<uint16_t> indices = {
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4
-    };
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
     VkBuffer                        vertexBuffer;
     VkDeviceMemory                  vertexBufferMemory;
     VkBuffer                        indexBuffer;
@@ -186,6 +173,7 @@ private:
 
     // UTIL
     std::vector<char> readFile(const std::string& filename);
+    void loadModel(const char* path);
 
     // TODO: not best way to to this, should have like a global debug setup
     #ifdef NDEBUG

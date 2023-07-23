@@ -5,6 +5,9 @@
 #include <set>
 #include <algorithm>
 #include <chrono>
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 #include <vulkan/vk_enum_string_helper.h>
 
 Swiftcanon::Swiftcanon()
@@ -69,6 +72,7 @@ void Swiftcanon::initVulkan()
     createFramebuffers();
     createCommandPool();
     createCommandBuffer();
+    loadModel("src/models/bunny.obj");
     createVertexBuffer();
     createIndexBuffer();
     createUniformBuffers();
@@ -1034,7 +1038,7 @@ void Swiftcanon::recordCommandBuffer(VkCommandBuffer command_buffer, uint32_t im
     vkCmdBeginRenderPass        (command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline           (command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
     vkCmdBindVertexBuffers      (command_buffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer        (command_buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer        (command_buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdBindDescriptorSets     (command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
     vkCmdSetViewport            (command_buffer, 0, 1, &viewport);
     vkCmdSetScissor             (command_buffer, 0, 1, &scissor);
@@ -1112,6 +1116,38 @@ std::vector<char> Swiftcanon::readFile(const std::string& filename) {
     file.close();
 
     return buffer;
+}
+
+void Swiftcanon::loadModel(const char* path)
+{
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path)) {
+        throw std::runtime_error(warn + err);
+    }
+
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            Vertex vertex{};
+            vertex.pos = {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
+
+            vertex.color = {
+                attrib.normals[3 * index.vertex_index + 0],
+                attrib.normals[3 * index.vertex_index + 1],
+                attrib.normals[3 * index.vertex_index + 2]
+            };
+
+            vertices.push_back(vertex);
+            indices.push_back(indices.size());
+        }
+    }
 }
 
 uint32_t Swiftcanon::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
@@ -1351,9 +1387,9 @@ void Swiftcanon::updateUniformBuffer(uint32_t currentImage)
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(24.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(32.0f, 32.0f, 12.0f), glm::vec3(0.0f, 0.0f, 8.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 100.0f);
     ubo.proj[1][1] *= -1;
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
