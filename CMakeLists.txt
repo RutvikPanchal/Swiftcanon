@@ -6,10 +6,14 @@ project(Swiftcanon VERSION 1.0.0)
 file(GLOB_RECURSE source src/*.cpp src/*.hpp src/*.c src/*.h)
 add_executable(${PROJECT_NAME} ${source})
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/vendor/glm)
-
 add_subdirectory(vendor/glfw)
 target_link_libraries(${PROJECT_NAME} glfw)
+
+add_subdirectory(vendor/glm)
+target_link_libraries(${PROJECT_NAME} glm)
+
+add_subdirectory(vendor/tinyobjloader)
+target_link_libraries(${PROJECT_NAME} tinyobjloader)
 
 find_package(Vulkan REQUIRED)
 target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan)
