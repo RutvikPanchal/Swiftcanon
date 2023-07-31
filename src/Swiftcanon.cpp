@@ -84,9 +84,9 @@ void Swiftcanon::addVulkanValidationLayers()
     }
     if (enableValidationLayers) {
         if (layerFound) {
-            logger.info("Enabling Validation Layers:");
+            logger.INFO("Enabling Validation Layers:");
             for (size_t i = 0; i < requiredValidationLayers.size(); i++) {
-                logger.info("   {0}", requiredValidationLayers.data()[i]);
+                logger.INFO("   {0}", requiredValidationLayers.data()[i]);
             }
         }
         else {
@@ -99,17 +99,17 @@ void Swiftcanon::addVulkanInstanceExtensions()
 {
     uint32_t extensionCount;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    logger.info(" {0} Vulkan Instance Extensions available", extensionCount);
+    logger.INFO(" {0} Vulkan Instance Extensions available", extensionCount);
 
     uint32_t requiredExtensionCount;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&requiredExtensionCount);
     for (size_t i = 0; i < requiredExtensionCount; i++) {
         requiredVulkanExtensions.push_back(glfwExtensions[i]);
     }
-    logger.info(" {0} Vulkan Instance Extensions enabled:", requiredVulkanExtensions.size());
+    logger.INFO(" {0} Vulkan Instance Extensions enabled:", requiredVulkanExtensions.size());
 
     for (size_t i = 0; i < requiredVulkanExtensions.size(); i++) {
-        logger.info("   {0}", requiredVulkanExtensions[i]);
+        logger.INFO("   {0}", requiredVulkanExtensions[i]);
     }
 }
 
@@ -163,13 +163,13 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
         }
 
         // TODO: Improve log formatting
-        logger.info(" {0} Physical Graphics Devices Found:", deviceCount);
+        logger.INFO(" {0} Physical Graphics Devices Found:", deviceCount);
         for (size_t i = 0; i < allDeviceDetails.size(); i++) {
             if (i == 0) {
-                logger.info("   * {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
+                logger.INFO("   * {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
             }
             else{
-                logger.info("     {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
+                logger.INFO("     {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
             }
         }
 
@@ -178,10 +178,10 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
             physicalDevice = devices[allDeviceDetails[0].deviceIndex];
             physicalDeviceDetails = allDeviceDetails[0];
             physicalDeviceIndices = allDeviceIndices[0];
-            logger.info(" Device Details: {0}", physicalDeviceDetails.name);
-            logger.info("   QueueFamily Indices:");
-            logger.info("     Graphics:     {0}", physicalDeviceIndices.graphicsFamily.value());
-            logger.info("     Presentation: {0}",  physicalDeviceIndices.presentFamily.value());
+            logger.INFO(" Device Details: {0}", physicalDeviceDetails.name);
+            logger.INFO("   QueueFamily Indices:");
+            logger.INFO("     Graphics:     {0}", physicalDeviceIndices.graphicsFamily.value());
+            logger.INFO("     Presentation: {0}",  physicalDeviceIndices.presentFamily.value());
         }
         else {
             throw std::runtime_error("[Vulkan] Failed to find a suitable GPU");
@@ -195,11 +195,11 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
 
 void Swiftcanon::createVulkanLogicalDevice()
 {
-    logger.info(" {0} Device Extensions available", physicalDeviceDetails.extensionCount);
+    logger.INFO(" {0} Device Extensions available", physicalDeviceDetails.extensionCount);
 
-    logger.info(" {0} Device Extensions enabled:", requiredDeviceExtensions.size());
+    logger.INFO(" {0} Device Extensions enabled:", requiredDeviceExtensions.size());
     for (size_t i = 0; i < requiredDeviceExtensions.size(); i++) {
-        logger.info("   {0}", requiredDeviceExtensions[i]);
+        logger.INFO("   {0}", requiredDeviceExtensions[i]);
     }
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -250,7 +250,7 @@ void Swiftcanon::createSwapChain()
     VkPresentModeKHR presentMode;
     VkExtent2D extent;
 
-    logger.info(" SwapChain:");
+    logger.INFO(" SwapChain:");
 
     // Get capabilities
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
@@ -259,7 +259,7 @@ void Swiftcanon::createSwapChain()
     uint32_t formatCount;
     std::vector<VkSurfaceFormatKHR> availableFormats;
     vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
-    logger.info("   {0} Formats available", formatCount);
+    logger.INFO("   {0} Formats available", formatCount);
     if (formatCount != 0) {
         availableFormats.resize(formatCount);
         vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, availableFormats.data());
@@ -277,7 +277,7 @@ void Swiftcanon::createSwapChain()
     uint32_t presentModeCount;
     std::vector<VkPresentModeKHR> availablePresentModes;
     vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
-    logger.info("   {0} Present Modes available", presentModeCount);
+    logger.INFO("   {0} Present Modes available", presentModeCount);
     if (presentModeCount != 0) {
         availablePresentModes.resize(presentModeCount);
         vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, availablePresentModes.data());
@@ -931,7 +931,7 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     }
     if (supportedExtensions != requiredDeviceExtensions.size()) {
         deviceDetails.score = 0;
-        logger.warn(" Physical Device {0} does not support required Vulkan Extensions, setting score to 0", deviceDetails.name);
+        logger.WARN(" Physical Device {0} does not support required Vulkan Extensions, setting score to 0", deviceDetails.name);
     }
     
     // Check if device supports required queues
@@ -956,7 +956,7 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     }
     if(deviceIndices.isComplete() == false){
         deviceDetails.score = 0;
-        logger.warn(" Physical Device {0} does not have Vulkan Compute and Render capabilities, setting score to 0", deviceDetails.name);
+        logger.WARN(" Physical Device {0} does not have Vulkan Compute and Render capabilities, setting score to 0", deviceDetails.name);
     }
 
     // Insert Entry in DeviceDetails Array
@@ -1353,7 +1353,7 @@ void Swiftcanon::drawFrame()
 
     result = vkQueuePresentKHR(presentQueue, &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        logger.info(" Recreating SwapChain, VkResult: {0}, FramebufferResized: {1}", string_VkResult(result), (framebufferResized?"True":"False"));
+        logger.INFO(" Recreating SwapChain, VkResult: {0}, FramebufferResized: {1}", string_VkResult(result), (framebufferResized?"True":"False"));
         framebufferResized = false;
         recreateSwapChain();
     }

@@ -7,7 +7,7 @@ void Window::init()
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     window = glfwCreateWindow(width, height, "Vulkan", nullptr, nullptr);
-    logger.info("Window Created");
+    logger.INFO("Window Created");
 }
 
 Window::Window()
