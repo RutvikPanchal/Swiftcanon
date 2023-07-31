@@ -12,6 +12,9 @@ target_link_libraries(${PROJECT_NAME} glfw)
 add_subdirectory(vendor/glm)
 target_link_libraries(${PROJECT_NAME} glm)
 
+add_subdirectory(vendor/spdlog)
+target_link_libraries(${PROJECT_NAME} spdlog)
+
 add_subdirectory(vendor/tinyobjloader)
 target_link_libraries(${PROJECT_NAME} tinyobjloader)
 

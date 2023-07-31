@@ -1,3 +1,5 @@
+#pragma once
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -10,6 +12,8 @@
 #include <vector>
 #include <string>
 #include <optional>
+
+#include "Window.h"
 
 struct UniformBufferObject {
     alignas(16) glm::mat4 model;
@@ -65,11 +69,11 @@ public:
     void run();
     void init();
 
-    // TODO: This doesn't seem like a good implementation
-    bool framebufferResized = false;
+private:
+    Window window = Window(&framebufferResized);
+    Logger logger = Logger("SWIFTCANON");
 
 private:
-    void initWindow();
     void initVulkan();
     void mainLoop();
     void cleanup();
@@ -90,7 +94,7 @@ private:
     std::vector<QueueFamilyIndices> allDeviceIndices;
     DeviceDetails                   physicalDeviceDetails;
     QueueFamilyIndices              physicalDeviceIndices;
-    VkPhysicalDevice                physicalDevice = VK_NULL_HANDLE;
+    VkPhysicalDevice                physicalDevice  = VK_NULL_HANDLE;
     std::vector<const char*>        requiredDeviceExtensions;
     VkDevice                        device;
     VkQueue                         graphicsQueue;
@@ -104,7 +108,6 @@ private:
     void createFramebuffers();
 
     // Vulkan Presentation Setup
-    GLFWwindow*                     window;
     VkSurfaceKHR                    surface;
     VkQueue                         presentQueue;
     VkSwapchainKHR                  swapChain;
@@ -113,6 +116,7 @@ private:
     VkExtent2D                      swapChainExtent;
     std::vector<VkImageView>        swapChainImageViews;
     std::vector<VkFramebuffer>      swapChainFramebuffers;
+    bool                            framebufferResized  = false;
 
     // Vulkan Pipeline Setup
     void createRenderPass();

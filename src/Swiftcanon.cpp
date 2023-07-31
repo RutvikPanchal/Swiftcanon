@@ -30,7 +30,6 @@ Swiftcanon::Swiftcanon()
 
 void Swiftcanon::init()
 {
-    initWindow();
     initVulkan();
 }
 
@@ -38,21 +37,6 @@ void Swiftcanon::run()
 {
     mainLoop();
     cleanup();
-}
-
-static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
-    Swiftcanon* app = reinterpret_cast<Swiftcanon*>(glfwGetWindowUserPointer(window));
-    app->framebufferResized = true;
-}
-
-void Swiftcanon::initWindow()
-{
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
-    glfwSetWindowUserPointer(window, this);
-    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-    std::cout << "[GLFW] Vulkan Window Created" << std::endl;
 }
 
 void Swiftcanon::initVulkan()
@@ -100,9 +84,9 @@ void Swiftcanon::addVulkanValidationLayers()
     }
     if (enableValidationLayers) {
         if (layerFound) {
-            std::cout << "[VULKAN] Enabling Validation Layers:" << std::endl;
+            logger.info("Enabling Validation Layers:");
             for (size_t i = 0; i < requiredValidationLayers.size(); i++) {
-                std::cout << "[VULKAN]   " << requiredValidationLayers.data()[i] << std::endl;
+                logger.info("   {0}", requiredValidationLayers.data()[i]);
             }
         }
         else {
@@ -115,17 +99,17 @@ void Swiftcanon::addVulkanInstanceExtensions()
 {
     uint32_t extensionCount;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    std::cout << "[VULKAN] " << extensionCount << " Vulkan Instance Extensions available" << std::endl;
+    logger.info(" {0} Vulkan Instance Extensions available", extensionCount);
 
     uint32_t requiredExtensionCount;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&requiredExtensionCount);
     for (size_t i = 0; i < requiredExtensionCount; i++) {
         requiredVulkanExtensions.push_back(glfwExtensions[i]);
     }
-    std::cout << "[VULKAN] " << requiredVulkanExtensions.size() << " Vulkan Instance Extensions enabled:" << std::endl;
+    logger.info(" {0} Vulkan Instance Extensions enabled:", requiredVulkanExtensions.size());
 
     for (size_t i = 0; i < requiredVulkanExtensions.size(); i++) {
-        std::cout << "[VULKAN]   " << requiredVulkanExtensions[i] << std::endl;
+        logger.info("   {0}", requiredVulkanExtensions[i]);
     }
 }
 
@@ -155,7 +139,7 @@ void Swiftcanon::createVulkanInstance()
 
 void Swiftcanon::createSurface()
 {
-    VkResult result = glfwCreateWindowSurface(vkInstance, window, nullptr, &surface);
+    VkResult result = window.createWindowSurface(vkInstance, &surface);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Window Surface");
@@ -179,13 +163,13 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
         }
 
         // TODO: Improve log formatting
-        std::cout << "[VULKAN] " << deviceCount << " Physical Graphics Devices Found: " << std::endl;
+        logger.info(" {0} Physical Graphics Devices Found:", deviceCount);
         for (size_t i = 0; i < allDeviceDetails.size(); i++) {
             if (i == 0) {
-                std::cout << "[VULKAN]   * " << allDeviceDetails[i].name << ", score: " << allDeviceDetails[i].score << std::endl;
+                logger.info("   * {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
             }
             else{
-                std::cout << "[VULKAN]     " << allDeviceDetails[i].name << ", score: " << allDeviceDetails[i].score << std::endl;
+                logger.info("     {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
             }
         }
 
@@ -194,10 +178,10 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
             physicalDevice = devices[allDeviceDetails[0].deviceIndex];
             physicalDeviceDetails = allDeviceDetails[0];
             physicalDeviceIndices = allDeviceIndices[0];
-            std::cout << "[VULKAN] Device Details: " << physicalDeviceDetails.name << std::endl;
-            std::cout << "[VULKAN]   QueueFamily Indices:" << std::endl;
-            std::cout << "[VULKAN]     Graphics:     " << physicalDeviceIndices.graphicsFamily.value() << std::endl;
-            std::cout << "[VULKAN]     Presentation: " << physicalDeviceIndices.presentFamily.value() << std::endl;
+            logger.info(" Device Details: {0}", physicalDeviceDetails.name);
+            logger.info("   QueueFamily Indices:");
+            logger.info("     Graphics:     {0}", physicalDeviceIndices.graphicsFamily.value());
+            logger.info("     Presentation: {0}",  physicalDeviceIndices.presentFamily.value());
         }
         else {
             throw std::runtime_error("[Vulkan] Failed to find a suitable GPU");
@@ -211,11 +195,11 @@ void Swiftcanon::pickPhysicalGraphicsDevice()
 
 void Swiftcanon::createVulkanLogicalDevice()
 {
-    std::cout << "[VULKAN] " << physicalDeviceDetails.extensionCount << " Device Extensions available" << std::endl;
+    logger.info(" {0} Device Extensions available", physicalDeviceDetails.extensionCount);
 
-    std::cout << "[VULKAN] " << requiredDeviceExtensions.size() << " Device Extensions enabled:" << std::endl;
+    logger.info(" {0} Device Extensions enabled:", requiredDeviceExtensions.size());
     for (size_t i = 0; i < requiredDeviceExtensions.size(); i++) {
-        std::cout << "[VULKAN]   " << requiredDeviceExtensions[i] << std::endl;
+        logger.info("   {0}", requiredDeviceExtensions[i]);
     }
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -266,7 +250,7 @@ void Swiftcanon::createSwapChain()
     VkPresentModeKHR presentMode;
     VkExtent2D extent;
 
-    std::cout << "[VULKAN] SwapChain:" << std::endl;
+    logger.info(" SwapChain:");
 
     // Get capabilities
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
@@ -275,7 +259,7 @@ void Swiftcanon::createSwapChain()
     uint32_t formatCount;
     std::vector<VkSurfaceFormatKHR> availableFormats;
     vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
-    std::cout << "[VULKAN]   " << formatCount << " Formats available" << std::endl;
+    logger.info("   {0} Formats available", formatCount);
     if (formatCount != 0) {
         availableFormats.resize(formatCount);
         vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, availableFormats.data());
@@ -293,7 +277,7 @@ void Swiftcanon::createSwapChain()
     uint32_t presentModeCount;
     std::vector<VkPresentModeKHR> availablePresentModes;
     vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
-    std::cout << "[VULKAN]   " << presentModeCount << " Present Modes available" << std::endl;
+    logger.info("   {0} Present Modes available", presentModeCount);
     if (presentModeCount != 0) {
         availablePresentModes.resize(presentModeCount);
         vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, availablePresentModes.data());
@@ -313,7 +297,7 @@ void Swiftcanon::createSwapChain()
     }
     else{
         int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
+        window.getFramebufferSize(&width, &height);
 
         VkExtent2D actualExtent = {
             static_cast<uint32_t>(width),
@@ -374,9 +358,9 @@ void Swiftcanon::createSwapChain()
 void Swiftcanon::recreateSwapChain()
 {
     int width = 0, height = 0;
-    glfwGetFramebufferSize(window, &width, &height);
+    window.getFramebufferSize(&width, &height);
     while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(window, &width, &height);
+        window.getFramebufferSize(&width, &height);
         glfwWaitEvents();
     }
 
@@ -947,7 +931,7 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     }
     if (supportedExtensions != requiredDeviceExtensions.size()) {
         deviceDetails.score = 0;
-        std::cout << "[VULKAN] WARNING: Physical Device " << deviceDetails.name << " does not support required Vulkan Extensions, setting score to 0" << std::endl;
+        logger.warn(" Physical Device {0} does not support required Vulkan Extensions, setting score to 0", deviceDetails.name);
     }
     
     // Check if device supports required queues
@@ -972,7 +956,7 @@ void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int device
     }
     if(deviceIndices.isComplete() == false){
         deviceDetails.score = 0;
-        std::cout << "[VULKAN] WARNING: Physical Device " << deviceDetails.name << " does not have Vulkan Compute and Render capabilities, setting score to 0" << std::endl;
+        logger.warn(" Physical Device {0} does not have Vulkan Compute and Render capabilities, setting score to 0", deviceDetails.name);
     }
 
     // Insert Entry in DeviceDetails Array
@@ -1310,8 +1294,8 @@ VkImageView Swiftcanon::createImageView(VkImage image, VkFormat format, VkImageA
 
 void Swiftcanon::mainLoop()
 {
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
+    while (window.isOpen()) {
+        window.listen();
         drawFrame();
     }
     vkDeviceWaitIdle(device);
@@ -1369,11 +1353,12 @@ void Swiftcanon::drawFrame()
 
     result = vkQueuePresentKHR(presentQueue, &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        std::cout << "[Vulkan] Recreating SwapChain" << std::endl;
+        logger.info(" Recreating SwapChain, VkResult: {0}, FramebufferResized: {1}", string_VkResult(result), (framebufferResized?"True":"False"));
         framebufferResized = false;
         recreateSwapChain();
     }
     else if (result != VK_SUCCESS) {
+        std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to present SwapChain Image");
     }
 
@@ -1420,6 +1405,4 @@ for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroyDevice(device, nullptr);
     vkDestroySurfaceKHR(vkInstance, surface, nullptr);
     vkDestroyInstance(vkInstance, nullptr);
-    glfwDestroyWindow(window);
-    glfwTerminate();
 }

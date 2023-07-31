@@ -7,3 +7,6 @@
 [submodule "vendor/tinyobjloader"]
 	path = vendor/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader.git
+[submodule "vendor/spdlog"]
+	path = vendor/spdlog
+	url = https://github.com/gabime/spdlog.git
