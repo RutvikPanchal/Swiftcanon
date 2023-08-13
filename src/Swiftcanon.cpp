@@ -1,11 +1,5 @@
 #include "Swiftcanon.h"
 
-#include <iostream>
-#include <fstream>
-#include <set>
-#include <algorithm>
-#include <chrono>
-
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -13,12 +7,6 @@
 Swiftcanon::Swiftcanon()
     :requiredValidationLayers({
         "VK_LAYER_KHRONOS_validation"
-    }),
-    requiredVulkanExtensions({
-        #ifdef APPLE
-            VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
-            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
-        #endif
     }),
     requiredDeviceExtensions({
         #ifdef APPLE
@@ -30,20 +18,17 @@ Swiftcanon::Swiftcanon()
 
 void Swiftcanon::init()
 {
-    // initVulkan();
+    initVulkan();
 }
 
 void Swiftcanon::run()
 {
     mainLoop();
-    // cleanup();
+    cleanup();
 }
 
 void Swiftcanon::initVulkan()
 {
-    addVulkanValidationLayers();
-    addVulkanInstanceExtensions();
-    createVulkanInstance();
     createSurface();
     pickPhysicalGraphicsDevice();
     createVulkanLogicalDevice();
@@ -65,81 +50,9 @@ void Swiftcanon::initVulkan()
     createSyncObjects();
 }
 
-void Swiftcanon::addVulkanValidationLayers()
-{
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-    bool layerFound;
-    for (const char* layerName : requiredValidationLayers) {
-        layerFound = false;
-        for (const auto& layerProperties : availableLayers) {
-            if (strcmp(layerName, layerProperties.layerName) == 0) {
-                layerFound = true;
-                break;
-            }
-        }
-    }
-    if (enableValidationLayers) {
-        if (layerFound) {
-            logger.INFO("Enabling Validation Layers:");
-            for (size_t i = 0; i < requiredValidationLayers.size(); i++) {
-                logger.INFO("   {0}", requiredValidationLayers.data()[i]);
-            }
-        }
-        else {
-            throw std::runtime_error("[VULKAN] Validation layers requested, but are not available");
-        }
-    }
-}
-
-void Swiftcanon::addVulkanInstanceExtensions()
-{
-    uint32_t extensionCount;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    logger.INFO(" {0} Vulkan Instance Extensions available", extensionCount);
-
-    uint32_t requiredExtensionCount;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&requiredExtensionCount);
-    for (size_t i = 0; i < requiredExtensionCount; i++) {
-        requiredVulkanExtensions.push_back(glfwExtensions[i]);
-    }
-    logger.INFO(" {0} Vulkan Instance Extensions enabled:", requiredVulkanExtensions.size());
-
-    for (size_t i = 0; i < requiredVulkanExtensions.size(); i++) {
-        logger.INFO("   {0}", requiredVulkanExtensions[i]);
-    }
-}
-
-void Swiftcanon::createVulkanInstance()
-{
-    VkInstanceCreateInfo createInfo{};
-    createInfo.sType                    = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    #ifdef APPLE
-        createInfo.flags                = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    #endif
-    createInfo.enabledExtensionCount    = static_cast<uint32_t>(requiredVulkanExtensions.size());
-    createInfo.ppEnabledExtensionNames  = requiredVulkanExtensions.data();
-    if (enableValidationLayers) {
-        createInfo.enabledLayerCount    = static_cast<uint32_t>(requiredValidationLayers.size());
-        createInfo.ppEnabledLayerNames  = requiredValidationLayers.data();
-    }
-    else {
-        createInfo.enabledLayerCount    = 0;
-    }
-
-    VkResult result = vkCreateInstance(&createInfo, nullptr, &vkInstance);
-    if (result != VK_SUCCESS) {
-        std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create Vulkan instance");
-    }
-}
-
 void Swiftcanon::createSurface()
 {
-    VkResult result = window.createWindowSurface(vkInstance, &surface);
+    VkResult result = window.createWindowSurface(vulkanInstance.getVkInstance(), &surface);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Window Surface");
@@ -149,14 +62,14 @@ void Swiftcanon::createSurface()
 void Swiftcanon::pickPhysicalGraphicsDevice()
 {
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr);
+    vkEnumeratePhysicalDevices(vulkanInstance.getVkInstance(), &deviceCount, nullptr);
 
     if (deviceCount == 0) {
         throw std::runtime_error("[Vulkan] Failed to find GPUs with Vulkan support");
     }
     else{
         std::vector<VkPhysicalDevice> devices(deviceCount);
-        vkEnumeratePhysicalDevices(vkInstance, &deviceCount, devices.data());
+        vkEnumeratePhysicalDevices(vulkanInstance.getVkInstance(), &deviceCount, devices.data());
 
         for (int i = 0; i < devices.size(); i++) {
             ratePhysicalGraphicsDevices(devices[i], i);
@@ -1296,9 +1209,9 @@ void Swiftcanon::mainLoop()
 {
     while (window.isOpen()) {
         window.listen();
-        // drawFrame();
+        drawFrame();
     }
-    // vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(device);
 }
 
 void Swiftcanon::drawFrame()
@@ -1403,6 +1316,6 @@ for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroyRenderPass(device, renderPass, nullptr);
     
     vkDestroyDevice(device, nullptr);
-    vkDestroySurfaceKHR(vkInstance, surface, nullptr);
-    vkDestroyInstance(vkInstance, nullptr);
+    vkDestroySurfaceKHR(vulkanInstance.getVkInstance(), surface, nullptr);
+    vkDestroyInstance(vulkanInstance.getVkInstance(), nullptr);
 }

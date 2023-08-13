@@ -1,4 +1,5 @@
 #pragma once
+#include "pch.h"
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -12,6 +13,8 @@ class VulkanInstance
 public:
     VulkanInstance();
    ~VulkanInstance();
+
+   VkInstance getVkInstance() const { return vkInstance; }
 
 private:
     void checkVulkanValidationLayers();

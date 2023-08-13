@@ -1,9 +1,8 @@
 #pragma once
+#include "pch.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-
-#include <memory>
 
 class Logger
 {

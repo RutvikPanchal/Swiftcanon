@@ -1,4 +1,5 @@
 #pragma once
+#include "pch.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -7,11 +8,6 @@
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
-#include <array>
-#include <vector>
-#include <string>
-#include <optional>
 
 #include "Window.h"
 #include "VulkanInstance.h"
@@ -83,16 +79,12 @@ private:
     void cleanup();
 
     // Vulkan Compute Setup
-    void addVulkanValidationLayers();
-    void addVulkanInstanceExtensions();
-    void createVulkanInstance();
     void pickPhysicalGraphicsDevice();
     void createVulkanLogicalDevice();
     void ratePhysicalGraphicsDevices(VkPhysicalDevice device, int deviceIndex);
 
     // Vulkan Compute Setup
     std::vector<const char*> const  requiredValidationLayers;
-    std::vector<const char*>        requiredVulkanExtensions;
     VkInstance                      vkInstance;
     std::vector<DeviceDetails>      allDeviceDetails;
     std::vector<QueueFamilyIndices> allDeviceIndices;

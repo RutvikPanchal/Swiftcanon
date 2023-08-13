@@ -1,7 +1,5 @@
 #include "VulkanInstance.h"
 
-#include <iostream>
-
 int VulkanInstance::id;
 
 VulkanInstance::VulkanInstance()

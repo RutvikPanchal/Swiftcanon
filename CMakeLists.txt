@@ -1,10 +1,11 @@
 # cmake -S . -B ./build
 
-cmake_minimum_required(VERSION 3.14.0)
+cmake_minimum_required(VERSION 3.16)
 project(Swiftcanon VERSION 1.0.0)
 
 file(GLOB_RECURSE source src/*.cpp src/*.hpp src/*.c src/*.h)
 add_executable(${PROJECT_NAME} ${source})
+target_precompile_headers(${PROJECT_NAME} PRIVATE src/pch.h)
 
 add_subdirectory(vendor/glfw)
 target_link_libraries(${PROJECT_NAME} glfw)

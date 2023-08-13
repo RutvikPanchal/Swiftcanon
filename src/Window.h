@@ -1,9 +1,8 @@
 #pragma once
+#include "pch.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
-#include <string>
 
 #include "Logger.h"
 

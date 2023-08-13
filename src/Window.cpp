@@ -1,7 +1,5 @@
 #include "Window.h"
 
-#include <iostream>
-
 int Window::id;
 
 Window::Window()
