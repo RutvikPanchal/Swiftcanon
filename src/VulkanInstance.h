@@ -5,11 +5,25 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <GLFW/glfw3.h>
 
-#include "Window.h"
 #include "Logger.h"
 
 class VulkanInstance
 {
+private:
+    struct DeviceDetails {
+        const char* name;
+        int         deviceIndex;
+        int         score;
+        uint32_t    extensionCount;
+    };
+    struct QueueFamilyIndices {
+        std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
+        bool isComplete() {
+            return graphicsFamily.has_value() && presentFamily.has_value();
+        }
+    };
+
 public:
     VulkanInstance();
    ~VulkanInstance();
@@ -21,15 +35,26 @@ private:
     void configureVulkanExtensions();
     void createVulkanInstance();
 
+    void pickPhysicalGraphicsDevice();
+    void ratePhysicalGraphicsDevices();
+    void createVulkanLogicalDevice();
+
 private:
-    static int          id;
-    VkInstance          vkInstance          = VK_NULL_HANDLE;
-    VkPhysicalDevice    physicalDevice      = VK_NULL_HANDLE;
-    VkDevice            logicalDevice       = VK_NULL_HANDLE;
+    static int              id;
+    VkInstance              vkInstance              = VK_NULL_HANDLE;
+    VkDevice                logicalDevice           = VK_NULL_HANDLE;
+    VkPhysicalDevice        physicalDevice          = VK_NULL_HANDLE;
+    DeviceDetails           physicalDeviceDetails;
+    QueueFamilyIndices      physicalDeviceIndices;
 
     std::vector<const char*>    vulkanValidationLayers;
     std::vector<const char*>    vulkanExtensions;
     VkInstanceCreateFlags       vulkanInstanceFlags;
+
+    std::vector<const char*>        vulkanDeviceExtensions;
+    std::vector<VkPhysicalDevice>   devices;
+    std::vector<DeviceDetails>      allDeviceDetails;
+    std::vector<QueueFamilyIndices> allDeviceIndices;
 
     #ifdef NDEBUG
         const bool enableValidationLayers   = false;

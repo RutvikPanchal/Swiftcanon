@@ -16,16 +16,27 @@ VulkanInstance::VulkanInstance()
         #ifdef APPLE
             VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR
         #endif
-    )
+    ),
+    vulkanDeviceExtensions({
+        #ifdef APPLE
+            "VK_KHR_portability_subset",
+        #endif
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    })
 {
     id += 1;
     checkVulkanValidationLayers();
     configureVulkanExtensions();
     createVulkanInstance();
+
+    ratePhysicalGraphicsDevices();
+    pickPhysicalGraphicsDevice();
+    createVulkanLogicalDevice();
 }
 
 VulkanInstance::~VulkanInstance()
 {
+    vkDestroyDevice(logicalDevice, nullptr);
     vkDestroyInstance(vkInstance, nullptr);
 }
 
@@ -97,5 +108,169 @@ void VulkanInstance::createVulkanInstance()
     else {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Vulkan instance");
+    }
+}
+
+// TODO: Massively improve scoring factors to better score the GPUs
+void VulkanInstance::ratePhysicalGraphicsDevices()
+{
+    uint32_t deviceCount = 0;
+    vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr);
+    devices.resize(deviceCount);
+    vkEnumeratePhysicalDevices(vkInstance, &deviceCount, devices.data());
+
+    if (deviceCount == 0) {
+        throw std::runtime_error("[Vulkan] Failed to find GPUs with Vulkan support");
+    }
+
+    for (int i = 0; i < devices.size(); i++)
+    {
+        VkPhysicalDeviceFeatures deviceFeatures;
+        VkPhysicalDeviceProperties deviceProperties;
+        vkGetPhysicalDeviceFeatures(devices[i], &deviceFeatures);
+        vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
+
+        uint32_t deviceExtensionCount;
+        vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &deviceExtensionCount, nullptr);
+        std::vector<VkExtensionProperties> availableDeviceExtensions(deviceExtensionCount);
+        vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &deviceExtensionCount, availableDeviceExtensions.data());
+
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, nullptr);
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, queueFamilies.data());
+
+        DeviceDetails deviceDetails;
+        std::string* string = new std::string(deviceProperties.deviceName);
+        deviceDetails.name = string->c_str();
+        deviceDetails.score = 0;
+        deviceDetails.deviceIndex = i;
+        deviceDetails.extensionCount = deviceExtensionCount;
+
+        // Discrete GPUs have a significant performance advantage
+        if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+            deviceDetails.score += 1000;
+        }
+        // Maximum possible size of textures affects graphics quality
+        deviceDetails.score += deviceProperties.limits.maxImageDimension2D;
+
+        // Score based on supported device extensions
+        int supportedExtensions = 0;
+        for (const char* requiredDeviceExtension : vulkanDeviceExtensions) {
+            for (VkExtensionProperties extension : availableDeviceExtensions) {
+                if (strcmp(requiredDeviceExtension, extension.extensionName) == 0) {
+                    supportedExtensions++;
+                    continue;
+                }
+            }
+        }
+        if (supportedExtensions != vulkanDeviceExtensions.size()) {
+            deviceDetails.score = 0;
+            logger.WARN(" Physical Device {0} does not support required Vulkan Extensions, setting score to 0", deviceDetails.name);
+        }
+
+        // Score based on supported device queues
+        QueueFamilyIndices deviceIndices;
+        for (uint32_t i = 0; i < queueFamilies.size(); i++) {
+            if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
+                deviceIndices.graphicsFamily = i;
+                break;
+            }
+            deviceDetails.score = 0;
+            logger.WARN(" Physical Device {0} does not have Vulkan Compute and Render capabilities, setting score to 0", deviceDetails.name);
+        }
+
+        // Insert Entry in DeviceDetails Array
+        if (allDeviceDetails.size() == 0) {
+            allDeviceDetails.push_back(deviceDetails);
+            allDeviceIndices.push_back(deviceIndices);
+        }
+        else {
+            for (size_t i = 0; i < allDeviceDetails.size(); i++) {
+                if (deviceDetails.score > allDeviceDetails[i].score) {
+                    allDeviceDetails.insert(allDeviceDetails.begin() + i, deviceDetails);
+                    allDeviceIndices.insert(allDeviceIndices.begin() + i, deviceIndices);
+                    break;
+                }
+                if (i == allDeviceDetails.size() - 1) {
+                    allDeviceDetails.push_back(deviceDetails);
+                    allDeviceIndices.push_back(deviceIndices);
+                    break;
+                }
+            }
+        }
+    }
+}
+void VulkanInstance::pickPhysicalGraphicsDevice()
+{
+    logger.TRACE(" {0} Physical Graphics Devices Found:", allDeviceDetails.size());
+    for (size_t i = 0; i < allDeviceDetails.size(); i++) {
+        if (i == 0) {
+            logger.TRACE("   * {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
+        }
+        else {
+            logger.TRACE("     {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
+        }
+    }
+
+    // Deafult Behavior: Gets the device with the highest score
+    if (devices.size() > 0) {
+        physicalDevice = devices[allDeviceDetails[0].deviceIndex];
+        physicalDeviceDetails = allDeviceDetails[0];
+        physicalDeviceIndices = allDeviceIndices[0];
+        logger.TRACE(" Device Details: {0}", physicalDeviceDetails.name);
+        logger.TRACE("   {0} Device Extensions available", physicalDeviceDetails.extensionCount);
+        logger.TRACE("   {0} Device Extensions enabled:", vulkanDeviceExtensions.size());
+        for (size_t i = 0; i < vulkanDeviceExtensions.size(); i++) {
+            logger.TRACE("     {0}", vulkanDeviceExtensions[i]);
+        }
+    }
+    else {
+        throw std::runtime_error("[Vulkan] Failed to find a suitable GPU");
+    }
+
+    if (physicalDevice == VK_NULL_HANDLE) {
+        throw std::runtime_error("[Vulkan] Failed to find a suitable GPU");
+    }
+}
+void VulkanInstance::createVulkanLogicalDevice()
+{
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    std::set<uint32_t> uniqueQueueFamilies = { physicalDeviceIndices.graphicsFamily.value() };
+
+    float queuePriority = 1.0f;
+    for (uint32_t queueFamily : uniqueQueueFamilies) {
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+        queueCreateInfo.sType               = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex    = queueFamily;
+        queueCreateInfo.queueCount          = 1;
+        queueCreateInfo.pQueuePriorities    = &queuePriority;
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
+
+    //VkPhysicalDeviceFeatures deviceFeatures{};
+
+    VkDeviceCreateInfo createInfo{};
+    createInfo.sType                    = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    //createInfo.pEnabledFeatures         = &deviceFeatures;
+    createInfo.queueCreateInfoCount     = static_cast<uint32_t>(queueCreateInfos.size());
+    createInfo.pQueueCreateInfos        = queueCreateInfos.data();
+    createInfo.enabledExtensionCount    = static_cast<uint32_t>(vulkanDeviceExtensions.size());
+    createInfo.ppEnabledExtensionNames  = vulkanDeviceExtensions.data();
+    if (enableValidationLayers) {
+        createInfo.enabledLayerCount    = static_cast<uint32_t>(vulkanValidationLayers.size());
+        createInfo.ppEnabledLayerNames  = vulkanValidationLayers.data();
+    }
+    else {
+        createInfo.enabledLayerCount    = 0;
+    }
+
+    VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice);
+    if (result == VK_SUCCESS) {
+        logger.INFO("Vulkan Logical Device Created");
+    }
+    else {
+        logger.ERROR("{0}", string_VkResult(result));
+        throw std::runtime_error("[VULKAN] Failed to create Logical Device");
     }
 }

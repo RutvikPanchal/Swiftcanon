@@ -18,13 +18,13 @@ Swiftcanon::Swiftcanon()
 
 void Swiftcanon::init()
 {
-    initVulkan();
+    //initVulkan();
 }
 
 void Swiftcanon::run()
 {
     mainLoop();
-    cleanup();
+    //cleanup();
 }
 
 void Swiftcanon::initVulkan()
@@ -41,7 +41,7 @@ void Swiftcanon::initVulkan()
     createFramebuffers();
     createCommandPool();
     createCommandBuffer();
-    loadModel("src/models/bunny.obj");
+    loadModel("../src/models/bunny.obj");
     createVertexBuffer();
     createIndexBuffer();
     createUniformBuffers();
@@ -412,8 +412,8 @@ void Swiftcanon::createDescriptorSetLayout()
 
 void Swiftcanon::createGraphicsPipeline()
 {
-    std::vector<char> vertShaderCode = readFile("src/shaders/compiled/vert.spv");
-    std::vector<char> fragShaderCode = readFile("src/shaders/compiled/frag.spv");
+    std::vector<char> vertShaderCode = readFile("../src/shaders/compiled/vert.spv");
+    std::vector<char> fragShaderCode = readFile("../src/shaders/compiled/frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -1209,9 +1209,9 @@ void Swiftcanon::mainLoop()
 {
     while (window.isOpen()) {
         window.listen();
-        drawFrame();
+        //drawFrame();
     }
-    vkDeviceWaitIdle(device);
+    //vkDeviceWaitIdle(device);
 }
 
 void Swiftcanon::drawFrame()
@@ -1264,7 +1264,7 @@ void Swiftcanon::drawFrame()
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;  // Optional
 
-    result = vkQueuePresentKHR(presentQueue, &presentInfo);
+    result = vkQueuePresentKHR(graphicsQueue, &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || window.getFramebufferResized()) {
         logger.INFO(" Recreating SwapChain, VkResult: {0}, FramebufferResized: {1}", string_VkResult(result), window.getFramebufferResized());
         window.setFramebufferResized(false);
@@ -1317,5 +1317,4 @@ for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     
     vkDestroyDevice(device, nullptr);
     vkDestroySurfaceKHR(vulkanInstance.getVkInstance(), surface, nullptr);
-    vkDestroyInstance(vulkanInstance.getVkInstance(), nullptr);
 }
