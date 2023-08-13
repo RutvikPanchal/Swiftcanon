@@ -2,23 +2,18 @@
 
 #include <iostream>
 
-void Window::init()
-{
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window = glfwCreateWindow(width, height, "Vulkan", nullptr, nullptr);
-    logger.INFO("Window Created");
-}
+int Window::id;
 
 Window::Window()
 {
-    init();
-}
+    id += 1;
 
-Window::Window(bool* outFramebufferResized)
-{
-    init();
-    glfwSetWindowUserPointer(window, outFramebufferResized);
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    logger.INFO("{0} Window Created", title);
+    
+    glfwSetWindowUserPointer(window, &framebufferResized);
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, int new_width, int new_height) {
         bool* framebufferResized = reinterpret_cast<bool*>(glfwGetWindowUserPointer(window));
         *framebufferResized = true;

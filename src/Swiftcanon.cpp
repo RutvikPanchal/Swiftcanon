@@ -30,13 +30,13 @@ Swiftcanon::Swiftcanon()
 
 void Swiftcanon::init()
 {
-    initVulkan();
+    // initVulkan();
 }
 
 void Swiftcanon::run()
 {
     mainLoop();
-    cleanup();
+    // cleanup();
 }
 
 void Swiftcanon::initVulkan()
@@ -1296,9 +1296,9 @@ void Swiftcanon::mainLoop()
 {
     while (window.isOpen()) {
         window.listen();
-        drawFrame();
+        // drawFrame();
     }
-    vkDeviceWaitIdle(device);
+    // vkDeviceWaitIdle(device);
 }
 
 void Swiftcanon::drawFrame()
@@ -1352,9 +1352,9 @@ void Swiftcanon::drawFrame()
     presentInfo.pResults = nullptr;  // Optional
 
     result = vkQueuePresentKHR(presentQueue, &presentInfo);
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        logger.INFO(" Recreating SwapChain, VkResult: {0}, FramebufferResized: {1}", string_VkResult(result), (framebufferResized?"True":"False"));
-        framebufferResized = false;
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || window.getFramebufferResized()) {
+        logger.INFO(" Recreating SwapChain, VkResult: {0}, FramebufferResized: {1}", string_VkResult(result), window.getFramebufferResized());
+        window.setFramebufferResized(false);
         recreateSwapChain();
     }
     else if (result != VK_SUCCESS) {

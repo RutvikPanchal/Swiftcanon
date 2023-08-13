@@ -12,20 +12,25 @@ class Window
 public:
     Window();
    ~Window();
-    Window(bool* outFramebufferResized);
 
-    void        init();
-    void        listen()            { glfwPollEvents(); }
-    bool        isOpen()            { return !glfwWindowShouldClose(window); }
+    void    listen()    { glfwPollEvents(); }
+    bool    isOpen()    { return !glfwWindowShouldClose(window); }
 
     void        getFramebufferSize  (int* width, int* height);
     VkResult    createWindowSurface (VkInstance vkInstance, VkSurfaceKHR* vkSurface);
 
+    bool getFramebufferResized() const      { return framebufferResized; }
+    void setFramebufferResized(bool value)  { framebufferResized = value; }
+
 private:
-    int         width   = 800;
-    int         height  = 600;
-    std::string title   = "Vulkan";
+    static int  id;
+
+    int         width               = 800;
+    int         height              = 600;
+    const char* title               = "Vulkan";
 
     GLFWwindow* window;
-    Logger logger = Logger("WINDOW");
+    bool        framebufferResized  = false;
+
+    Logger logger = Logger((std::string("WINDOW ").append(std::to_string(id))).c_str());
 };

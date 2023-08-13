@@ -14,6 +14,9 @@
 #include <optional>
 
 #include "Window.h"
+#include "VulkanInstance.h"
+
+#include "Logger.h"
 
 struct UniformBufferObject {
     alignas(16) glm::mat4 model;
@@ -70,8 +73,9 @@ public:
     void init();
 
 private:
-    Window window = Window(&framebufferResized);
-    Logger logger = Logger("SWIFTCANON");
+    Window          window;
+    VulkanInstance  vulkanInstance;
+    Logger          logger              = Logger("SWIFTCANON");
 
 private:
     void initVulkan();
@@ -116,7 +120,6 @@ private:
     VkExtent2D                      swapChainExtent;
     std::vector<VkImageView>        swapChainImageViews;
     std::vector<VkFramebuffer>      swapChainFramebuffers;
-    bool                            framebufferResized  = false;
 
     // Vulkan Pipeline Setup
     void createRenderPass();
