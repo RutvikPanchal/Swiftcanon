@@ -3,8 +3,8 @@
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
-#include <GLFW/glfw3.h>
 
+#include "Window.h"
 #include "Logger.h"
 
 class VulkanInstance
@@ -25,10 +25,11 @@ private:
     };
 
 public:
-    VulkanInstance();
+    VulkanInstance(Window* windowPtr = nullptr);
    ~VulkanInstance();
 
-   VkInstance getVkInstance() const { return vkInstance; }
+    // TODO: remove this
+    VkInstance getVkInstance() const { return vkInstance; }
 
 private:
     void checkVulkanValidationLayers();
@@ -56,6 +57,11 @@ private:
     std::vector<DeviceDetails>      allDeviceDetails;
     std::vector<QueueFamilyIndices> allDeviceIndices;
 
+private:
+    Window*         window;
+    VkSurfaceKHR    surface;
+
+private:
     #ifdef NDEBUG
         const bool enableValidationLayers   = false;
     #else

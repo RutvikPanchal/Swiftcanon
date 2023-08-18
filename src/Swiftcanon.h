@@ -70,7 +70,7 @@ public:
 
 private:
     Window          window;
-    VulkanInstance  vulkanInstance;
+    VulkanInstance  vulkanInstance      = VulkanInstance(&window);
     Logger          logger              = Logger("SWIFTCANON");
 
 private:

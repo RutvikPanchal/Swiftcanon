@@ -18,18 +18,13 @@ Window::Window()
     });
 }
 
-void Window::getFramebufferSize(int* width, int* height)
-{
-    glfwGetFramebufferSize(window, width, height);
-}
-
-VkResult Window::createWindowSurface(VkInstance vkInstance, VkSurfaceKHR* vkSurface)
-{
-    return glfwCreateWindowSurface(vkInstance, window, nullptr, vkSurface);
-}
-
 Window::~Window()
 {
     glfwDestroyWindow(window);
     glfwTerminate();
+}
+
+void Window::getFramebufferSize(int* width, int* height)
+{
+    glfwGetFramebufferSize(window, width, height);
 }

@@ -52,9 +52,8 @@ void Swiftcanon::initVulkan()
 
 void Swiftcanon::createSurface()
 {
-    VkResult result = window.createWindowSurface(vulkanInstance.getVkInstance(), &surface);
+    VkResult result = glfwCreateWindowSurface(vulkanInstance.getVkInstance(), window.getNativeWindow(), nullptr, &surface);
     if (result != VK_SUCCESS) {
-        std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Window Surface");
     }
 }

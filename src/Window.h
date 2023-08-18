@@ -1,7 +1,6 @@
 #pragma once
 #include "pch.h"
 
-#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include "Logger.h"
@@ -15,11 +14,14 @@ public:
     void    listen()    { glfwPollEvents(); }
     bool    isOpen()    { return !glfwWindowShouldClose(window); }
 
-    void        getFramebufferSize  (int* width, int* height);
-    VkResult    createWindowSurface (VkInstance vkInstance, VkSurfaceKHR* vkSurface);
+    void         getFramebufferSize  (int* width, int* height);
+    const char** getVulkanExtensions (uint32_t* requiredExtensionCount) { return glfwGetRequiredInstanceExtensions(requiredExtensionCount); }
 
     bool getFramebufferResized() const      { return framebufferResized; }
     void setFramebufferResized(bool value)  { framebufferResized = value; }
+
+    // TODO: remove this
+    GLFWwindow* getNativeWindow() const     { return window; }
 
 private:
     static int  id;

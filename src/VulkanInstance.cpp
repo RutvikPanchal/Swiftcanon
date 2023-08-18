@@ -2,7 +2,7 @@
 
 int VulkanInstance::id;
 
-VulkanInstance::VulkanInstance()
+VulkanInstance::VulkanInstance(Window* windowPtr)
     :vulkanValidationLayers({
         "VK_LAYER_KHRONOS_validation"
     }),
@@ -22,12 +22,19 @@ VulkanInstance::VulkanInstance()
             "VK_KHR_portability_subset",
         #endif
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    })
+    }),
+    window(windowPtr)
 {
     id += 1;
+
     checkVulkanValidationLayers();
     configureVulkanExtensions();
     createVulkanInstance();
+
+    // TODO: move it to Window class somehow
+    if(window) {
+        glfwCreateWindowSurface(vkInstance, window->getNativeWindow(), nullptr, &surface);
+    }
 
     ratePhysicalGraphicsDevices();
     pickPhysicalGraphicsDevice();
@@ -37,6 +44,7 @@ VulkanInstance::VulkanInstance()
 VulkanInstance::~VulkanInstance()
 {
     vkDestroyDevice(logicalDevice, nullptr);
+    vkDestroySurfaceKHR(vkInstance, surface, nullptr);
     vkDestroyInstance(vkInstance, nullptr);
 }
 
@@ -76,9 +84,12 @@ void VulkanInstance::configureVulkanExtensions()
     logger.TRACE(" {0} Vulkan Instance Extensions available", extensionCount);
 
     uint32_t requiredExtensionCount;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&requiredExtensionCount);
-    for (size_t i = 0; i < requiredExtensionCount; i++) {
-        vulkanExtensions.push_back(glfwExtensions[i]);
+    const char** glfwExtensions;
+    if(window) {
+        glfwExtensions = window->getVulkanExtensions(&requiredExtensionCount);
+        for (size_t i = 0; i < requiredExtensionCount; i++) {
+            vulkanExtensions.push_back(glfwExtensions[i]);
+        }
     }
     logger.TRACE(" {0} Vulkan Instance Extensions enabled:", vulkanExtensions.size());
 
@@ -213,7 +224,7 @@ void VulkanInstance::pickPhysicalGraphicsDevice()
         }
     }
 
-    // Deafult Behavior: Gets the device with the highest score
+    // Default Behavior: Gets the device with the highest score
     if (devices.size() > 0) {
         physicalDevice = devices[allDeviceDetails[0].deviceIndex];
         physicalDeviceDetails = allDeviceDetails[0];
@@ -248,11 +259,11 @@ void VulkanInstance::createVulkanLogicalDevice()
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    //VkPhysicalDeviceFeatures deviceFeatures{};
+    VkPhysicalDeviceFeatures deviceFeatures{};
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType                    = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    //createInfo.pEnabledFeatures         = &deviceFeatures;
+    createInfo.pEnabledFeatures         = &deviceFeatures;
     createInfo.queueCreateInfoCount     = static_cast<uint32_t>(queueCreateInfos.size());
     createInfo.pQueueCreateInfos        = queueCreateInfos.data();
     createInfo.enabledExtensionCount    = static_cast<uint32_t>(vulkanDeviceExtensions.size());
