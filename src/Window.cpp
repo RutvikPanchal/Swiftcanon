@@ -28,3 +28,16 @@ void Window::getFramebufferSize(int* width, int* height)
 {
     glfwGetFramebufferSize(window, width, height);
 }
+
+const char** Window::getVulkanExtensions(uint32_t *requiredExtensionCount)
+{
+    return glfwGetRequiredInstanceExtensions(requiredExtensionCount);
+}
+
+void Window::createWindowSurface(VkInstance vkInstance, VkSurfaceKHR *vkSurface)
+{
+    VkResult result = glfwCreateWindowSurface(vkInstance, window, nullptr, vkSurface);
+    if (result != VK_SUCCESS) {
+        throw std::runtime_error("[VULKAN] Failed to create Window Surface");
+    }
+}

@@ -31,10 +31,7 @@ VulkanInstance::VulkanInstance(Window* windowPtr)
     configureVulkanExtensions();
     createVulkanInstance();
 
-    // TODO: move it to Window class somehow
-    if(window) {
-        glfwCreateWindowSurface(vkInstance, window->getNativeWindow(), nullptr, &surface);
-    }
+    if(window) { window->createWindowSurface(vkInstance, &surface); }
 
     ratePhysicalGraphicsDevices();
     pickPhysicalGraphicsDevice();
@@ -183,10 +180,29 @@ void VulkanInstance::ratePhysicalGraphicsDevices()
         // Score based on supported device queues
         QueueFamilyIndices deviceIndices;
         for (uint32_t i = 0; i < queueFamilies.size(); i++) {
-            if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
+            VkBool32 presentSupport = false;
+            if(window) {
+                vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
+            }
+            if(presentSupport && (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
+                deviceIndices.presentFamily = i;
                 deviceIndices.graphicsFamily = i;
                 break;
             }
+            else {
+                if (presentSupport) {
+                    deviceIndices.presentFamily = i;
+                }
+                if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                    deviceIndices.graphicsFamily = i;
+                }
+            }
+        }
+        if(deviceIndices.graphicsFamily.has_value() == false) {
+            deviceDetails.score = 0;
+            logger.WARN(" Physical Device {0} does not have Vulkan Compute capabilities, setting score to 0", deviceDetails.name);
+        }
+        if(window && (deviceIndices.isComplete() == false)) {
             deviceDetails.score = 0;
             logger.WARN(" Physical Device {0} does not have Vulkan Compute and Render capabilities, setting score to 0", deviceDetails.name);
         }
