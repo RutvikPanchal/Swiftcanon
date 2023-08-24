@@ -3,7 +3,8 @@
 int VulkanInstance::id;
 
 VulkanInstance::VulkanInstance(Window* windowPtr)
-    :vulkanValidationLayers({
+    :window(windowPtr),
+    vulkanValidationLayers({
         "VK_LAYER_KHRONOS_validation"
     }),
     vulkanExtensions({
@@ -21,11 +22,11 @@ VulkanInstance::VulkanInstance(Window* windowPtr)
         #ifdef APPLE
             "VK_KHR_portability_subset",
         #endif
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    }),
-    window(windowPtr)
+    })
 {
     id += 1;
+
+    if(window) { vulkanDeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); }
 
     checkVulkanValidationLayers();
     configureVulkanExtensions();
@@ -41,7 +42,7 @@ VulkanInstance::VulkanInstance(Window* windowPtr)
 VulkanInstance::~VulkanInstance()
 {
     vkDestroyDevice(logicalDevice, nullptr);
-    vkDestroySurfaceKHR(vkInstance, surface, nullptr);
+    if(window) { vkDestroySurfaceKHR(vkInstance, surface, nullptr); }
     vkDestroyInstance(vkInstance, nullptr);
 }
 
