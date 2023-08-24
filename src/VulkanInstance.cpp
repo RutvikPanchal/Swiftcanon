@@ -131,22 +131,25 @@ void VulkanInstance::ratePhysicalGraphicsDevices()
         throw std::runtime_error("[Vulkan] Failed to find GPUs with Vulkan support");
     }
 
+    VkPhysicalDevice device;
     for (int i = 0; i < devices.size(); i++)
     {
+        device = devices[i];
+        
         VkPhysicalDeviceFeatures deviceFeatures;
         VkPhysicalDeviceProperties deviceProperties;
-        vkGetPhysicalDeviceFeatures(devices[i], &deviceFeatures);
-        vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
+        vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+        vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
         uint32_t deviceExtensionCount;
-        vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &deviceExtensionCount, nullptr);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &deviceExtensionCount, nullptr);
         std::vector<VkExtensionProperties> availableDeviceExtensions(deviceExtensionCount);
-        vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &deviceExtensionCount, availableDeviceExtensions.data());
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &deviceExtensionCount, availableDeviceExtensions.data());
 
         uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, nullptr);
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
         std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, queueFamilies.data());
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
         DeviceDetails deviceDetails;
         std::string* string = new std::string(deviceProperties.deviceName);
@@ -182,7 +185,7 @@ void VulkanInstance::ratePhysicalGraphicsDevices()
         for (uint32_t i = 0; i < queueFamilies.size(); i++) {
             VkBool32 presentSupport = false;
             if(window) {
-                vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
+                vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
             }
             if(presentSupport && (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
                 deviceIndices.presentFamily = i;
