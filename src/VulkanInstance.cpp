@@ -249,12 +249,15 @@ void VulkanInstance::pickPhysicalGraphicsDevice()
         physicalDevice = devices[allDeviceDetails[0].deviceIndex];
         physicalDeviceDetails = allDeviceDetails[0];
         physicalDeviceIndices = allDeviceIndices[0];
-        logger.TRACE(" Device Details: {0}", physicalDeviceDetails.name);
+        logger.INFO(" Device Details: {0}", physicalDeviceDetails.name);
         logger.TRACE("   {0} Device Extensions available", physicalDeviceDetails.extensionCount);
         logger.TRACE("   {0} Device Extensions enabled:", vulkanDeviceExtensions.size());
         for (size_t i = 0; i < vulkanDeviceExtensions.size(); i++) {
             logger.TRACE("     {0}", vulkanDeviceExtensions[i]);
         }
+        logger.TRACE("   QueueFamily Indices:");
+        logger.TRACE("     Graphics:     {0}", physicalDeviceIndices.graphicsFamily.value());
+        if(window) { logger.TRACE("     Presentation: {0}", physicalDeviceIndices.presentFamily.value()); }
     }
     else {
         throw std::runtime_error("[Vulkan] Failed to find a suitable GPU");
@@ -299,6 +302,12 @@ void VulkanInstance::createVulkanLogicalDevice()
     VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice);
     if (result == VK_SUCCESS) {
         logger.INFO("Vulkan Logical Device Created");
+        vkGetDeviceQueue(logicalDevice, physicalDeviceIndices.graphicsFamily.value(), 0, &graphicsQueue);
+        logger.TRACE("  DeviceQueue Bound: Graphics");
+        if(window) {
+            vkGetDeviceQueue(logicalDevice, physicalDeviceIndices.presentFamily.value(), 0, &presentQueue);
+            logger.TRACE("  DeviceQueue Bound: Presentation");
+        }
     }
     else {
         logger.ERROR("{0}", string_VkResult(result));

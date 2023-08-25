@@ -57,6 +57,9 @@ private:
     std::vector<DeviceDetails>      allDeviceDetails;
     std::vector<QueueFamilyIndices> allDeviceIndices;
 
+    VkQueue                         graphicsQueue;
+    VkQueue                         presentQueue;
+
 private:
     Window*         window;
     VkSurfaceKHR    surface;
