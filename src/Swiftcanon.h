@@ -11,6 +11,7 @@
 
 #include "Window.h"
 #include "VulkanInstance.h"
+#include "Swapchain.h"
 
 #include "Logger.h"
 
@@ -19,7 +20,6 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
 };
-
 struct Vertex {
     glm::vec3 pos;
     glm::vec3 color;
@@ -45,14 +45,12 @@ struct Vertex {
         return attributeDescriptions;
     }
 };
-
 struct DeviceDetails {
     const char* name;
     int         deviceIndex;
     int         score;
     uint32_t    extensionCount;
 };
-
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;
@@ -70,8 +68,10 @@ public:
 
 private:
     Window          window;
-    VulkanInstance  vulkanInstance      = VulkanInstance(&window);
-    Logger          logger              = Logger("SWIFTCANON");
+    VulkanInstance  vulkanInstance  = VulkanInstance(&window);
+    Swapchain       vulkanSwapChain = Swapchain(&vulkanInstance);
+
+    Logger          logger          = Logger("SWIFTCANON");
 
 private:
     void initVulkan();

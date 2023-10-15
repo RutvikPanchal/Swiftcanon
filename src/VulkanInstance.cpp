@@ -41,8 +41,14 @@ VulkanInstance::VulkanInstance(Window* windowPtr)
 
 VulkanInstance::~VulkanInstance()
 {
+    logger.INFO("(MEMORY) Cleaning up VulkanInstance");
+    logger.TRACE("  Destroying logicalDevice...");
     vkDestroyDevice(logicalDevice, nullptr);
-    if(window) { vkDestroySurfaceKHR(vkInstance, surface, nullptr); }
+if(window) {
+    logger.TRACE("  Destroying windowSurface...");
+    vkDestroySurfaceKHR(vkInstance, surface, nullptr);
+}
+    logger.TRACE("  Destroying vulkanInstance...");
     vkDestroyInstance(vkInstance, nullptr);
 }
 

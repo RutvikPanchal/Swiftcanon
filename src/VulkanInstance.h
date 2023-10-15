@@ -10,6 +10,9 @@
 class VulkanInstance
 {
 private:
+    // TODO: Doesn't seem quite perfect, maybe use inheritance or make variables public
+    friend class Swapchain;
+
     struct DeviceDetails {
         const char* name;
         int         deviceIndex;
@@ -28,9 +31,9 @@ public:
     VulkanInstance(Window* windowPtr = nullptr);
    ~VulkanInstance();
 
-    // TODO: remove this
-    VkInstance getVkInstance() const { return vkInstance; }
-
+    // TODO: remove this maybe?    
+    VkInstance  getVkInstance() const { return vkInstance; }
+    
 private:
     void checkVulkanValidationLayers();
     void configureVulkanExtensions();
@@ -48,6 +51,10 @@ private:
     DeviceDetails           physicalDeviceDetails;
     QueueFamilyIndices      physicalDeviceIndices;
 
+    VkQueue                 graphicsQueue;
+    VkQueue                 presentQueue;
+
+private:
     std::vector<const char*>    vulkanValidationLayers;
     std::vector<const char*>    vulkanExtensions;
     VkInstanceCreateFlags       vulkanInstanceFlags;
@@ -57,12 +64,9 @@ private:
     std::vector<DeviceDetails>      allDeviceDetails;
     std::vector<QueueFamilyIndices> allDeviceIndices;
 
-    VkQueue                         graphicsQueue;
-    VkQueue                         presentQueue;
-
 private:
-    Window*         window;
-    VkSurfaceKHR    surface;
+    Window*         window  = nullptr;
+    VkSurfaceKHR    surface = VK_NULL_HANDLE;
 
 private:
     #ifdef NDEBUG

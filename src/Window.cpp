@@ -20,6 +20,8 @@ Window::Window()
 
 Window::~Window()
 {
+    logger.INFO("(MEMORY) Cleaning up Window");
+    logger.TRACE("  Destroying window...");
     glfwDestroyWindow(window);
     glfwTerminate();
 }
