@@ -50,6 +50,7 @@ void Swapchain::getSuitableSurfaceFormat()
             break;
         }
     }
+    swapChainImageFormat = surfaceFormat.format;
 }
 void Swapchain::getSuitablePresentMode()
 {
@@ -72,7 +73,6 @@ void Swapchain::getSuitablePresentMode()
 void Swapchain::createSwapChain()
 {
     // Get Swap Extent
-    VkExtent2D extent;
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         extent = capabilities.currentExtent;
     }

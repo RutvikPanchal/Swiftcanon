@@ -12,6 +12,7 @@
 #include "Window.h"
 #include "VulkanInstance.h"
 #include "Swapchain.h"
+#include "GraphicsPipeline.h"
 
 #include "Logger.h"
 
@@ -67,9 +68,10 @@ public:
     void init();
 
 private:
-    Window          window;
-    VulkanInstance  vulkanInstance  = VulkanInstance(&window);
-    Swapchain       vulkanSwapChain = Swapchain(&vulkanInstance);
+    Window              window;
+    VulkanInstance      vulkanInstance          = VulkanInstance(&window);
+    Swapchain           vulkanSwapChain         = Swapchain(&vulkanInstance);
+    GraphicsPipeline    vulkanGraphicsPipeline  = GraphicsPipeline(&vulkanInstance, &vulkanSwapChain);
 
     Logger          logger          = Logger("SWIFTCANON");
 

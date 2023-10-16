@@ -12,6 +12,9 @@ public:
     Swapchain(VulkanInstance* vkInstance);
    ~Swapchain();
 
+   VkExtent2D   getSwapchainExtent()        const { return extent; }
+   VkFormat     getSwapChainImageFormat()   const { return swapChainImageFormat; }
+
 private:
     void getSurfaceCapabilities();
     void getSuitableSurfaceFormat();
@@ -29,6 +32,9 @@ private:
     VkSurfaceCapabilitiesKHR    capabilities;
     VkSurfaceFormatKHR          surfaceFormat;
     VkPresentModeKHR            presentMode;
+
+    VkFormat                    swapChainImageFormat;
+    VkExtent2D                  extent;
 
 private:
     VulkanInstance* vkInstance;

@@ -31,8 +31,9 @@ public:
     VulkanInstance(Window* windowPtr = nullptr);
    ~VulkanInstance();
 
-    // TODO: remove this maybe?    
-    VkInstance  getVkInstance() const { return vkInstance; }
+    // TODO: remove these maybe?    
+    VkInstance  getVkInstance()             const { return vkInstance; }
+    VkDevice    getVulkanLogicalDevice()    const { return logicalDevice; }
     
 private:
     void checkVulkanValidationLayers();

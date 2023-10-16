@@ -29,14 +29,14 @@ void Swiftcanon::run()
 
 void Swiftcanon::initVulkan()
 {
-    createSurface();
-    pickPhysicalGraphicsDevice();
-    createVulkanLogicalDevice();
-    createSwapChain();
-    createImageViews();
-    createRenderPass();
-    createDescriptorSetLayout();
-    createGraphicsPipeline();
+    createSurface(); // done
+    pickPhysicalGraphicsDevice(); // done
+    createVulkanLogicalDevice(); // done
+    createSwapChain(); // done
+    createImageViews(); // done
+    createRenderPass(); // done
+    createDescriptorSetLayout(); // done
+    createGraphicsPipeline(); // done
     createDepthResources();
     createFramebuffers();
     createCommandPool();
