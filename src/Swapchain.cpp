@@ -15,20 +15,53 @@ Swapchain::Swapchain(VulkanInstance* vkInstance)
         getSuitableSurfaceFormat();
         getSuitablePresentMode();
 
-        createSwapChain();
-        createSwapChainImageViews();
+        createSwapchain();
+        createSwapchainImageViews();
     }
 }
 
 Swapchain::~Swapchain()
 {
     logger.INFO("(MEMORY) Cleaning up Swapchain");
+    logger.TRACE("  Destroying swapChainFramebuffers...");
+    for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
+        vkDestroyFramebuffer(vkInstance->logicalDevice, swapChainFramebuffers[i], nullptr);
+    }
     logger.TRACE("  Destroying swapChainImageViews...");
     for (size_t i = 0; i < swapChainImageViews.size(); i++) {
         vkDestroyImageView(vkInstance->logicalDevice, swapChainImageViews[i], nullptr);
     }
     logger.TRACE("  Destroying swapChain...");
     vkDestroySwapchainKHR(vkInstance->logicalDevice, swapChain, nullptr);
+}
+
+void Swapchain::createSwapchainFramebuffers(VkRenderPass renderPass)
+{
+    swapChainFramebuffers.resize(swapChainImageViews.size());
+    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+        
+        // std::array<VkImageView, 2> attachments = {
+        //     swapChainImageViews[i],
+        //     depthImageView
+        // };
+        std::array<VkImageView, 1> attachments = {
+            swapChainImageViews[i]
+        };
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass      = renderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments    = attachments.data();
+        framebufferInfo.width           = swapChainExtent.width;
+        framebufferInfo.height          = swapChainExtent.height;
+        framebufferInfo.layers          = 1;
+
+        VkResult result = vkCreateFramebuffer(vkInstance->logicalDevice, &framebufferInfo, nullptr, &swapChainFramebuffers[i]);
+        if (result != VK_SUCCESS) {
+            std::cerr << string_VkResult(result) << std::endl;
+            throw std::runtime_error("[VULKAN] Failed to create Framebuffer");
+        }
+    }
 }
 
 void Swapchain::getSurfaceCapabilities()
@@ -70,11 +103,11 @@ void Swapchain::getSuitablePresentMode()
     }
 }
 
-void Swapchain::createSwapChain()
+void Swapchain::createSwapchain()
 {
     // Get Swap Extent
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        extent = capabilities.currentExtent;
+        swapChainExtent = capabilities.currentExtent;
     }
     else{
         int width, height;
@@ -87,7 +120,7 @@ void Swapchain::createSwapChain()
         actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
         actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
         
-        extent = actualExtent;
+        swapChainExtent = actualExtent;
     }
 
     // Get Image Count
@@ -103,7 +136,7 @@ void Swapchain::createSwapChain()
     createInfo.minImageCount                = imageCount;
     createInfo.imageFormat                  = surfaceFormat.format;
     createInfo.imageColorSpace              = surfaceFormat.colorSpace;
-    createInfo.imageExtent                  = extent;
+    createInfo.imageExtent                  = swapChainExtent;
     createInfo.imageArrayLayers             = 1;
     createInfo.imageUsage                   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     uint32_t queueFamilyIndices[] = {
@@ -132,10 +165,10 @@ void Swapchain::createSwapChain()
     }
     else {
         std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[SWAPCHAIN] Failed to create SwapChain");
+        throw std::runtime_error("[SWAPCHAIN] Failed to create Swapchain");
     }
 }
-void Swapchain::createSwapChainImageViews()
+void Swapchain::createSwapchainImageViews()
 {
     // Create SwapchainImageViews
     swapChainImageViews.resize(swapChainImages.size());
@@ -158,7 +191,7 @@ void Swapchain::createSwapChainImageViews()
         VkResult result = vkCreateImageView(vkInstance->logicalDevice, &createInfo, nullptr, &swapChainImageViews[i]);
         if (result != VK_SUCCESS) {
             std::cerr << string_VkResult(result) << std::endl;
-            throw std::runtime_error("[VULKAN] Failed to create SwapChain ImageViews");
+            throw std::runtime_error("[VULKAN] Failed to create Swapchain ImageViews");
         }
     }
 }

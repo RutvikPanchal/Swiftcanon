@@ -15,6 +15,9 @@ public:
     GraphicsPipeline(VulkanInstance* vkInstance, Swapchain* swapchain);
    ~GraphicsPipeline();
 
+   VkRenderPass getRenderPass()         const { return renderPass; }
+   VkPipeline   getGraphicsPipeline()   const { return graphicsPipeline; }
+
 private:
     VkShaderModule createShaderModule(const std::vector<char>& code);
 

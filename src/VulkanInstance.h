@@ -12,6 +12,8 @@ class VulkanInstance
 private:
     // TODO: Doesn't seem quite perfect, maybe use inheritance or make variables public
     friend class Swapchain;
+    friend class CommandDispatcher;
+    friend class Swiftcanon;
 
     struct DeviceDetails {
         const char* name;
@@ -32,8 +34,9 @@ public:
    ~VulkanInstance();
 
     // TODO: remove these maybe?    
-    VkInstance  getVkInstance()             const { return vkInstance; }
-    VkDevice    getVulkanLogicalDevice()    const { return logicalDevice; }
+    VkInstance      getVkInstance()             const { return vkInstance; }
+    VkSurfaceKHR    getWindowSurface()          const { return surface; }
+    VkDevice        getVulkanLogicalDevice()    const { return logicalDevice; }
     
 private:
     void checkVulkanValidationLayers();

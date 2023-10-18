@@ -5,164 +5,56 @@
 #include <vulkan/vk_enum_string_helper.h>
 
 Swiftcanon::Swiftcanon()
-    :requiredValidationLayers({
-        "VK_LAYER_KHRONOS_validation"
-    }),
-    requiredDeviceExtensions({
-        #ifdef APPLE
-            "VK_KHR_portability_subset",
-        #endif
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    })
-{}
+{
+    // VulkanInstance
+    vkInstance              = vulkanInstance.vkInstance;
+    physicalDevice          = vulkanInstance.physicalDevice;
+    physicalDeviceIndices   = vulkanInstance.physicalDeviceIndices;
+    logicalDevice           = vulkanInstance.logicalDevice;
+    graphicsQueue           = vulkanInstance.graphicsQueue;
+    presentQueue            = vulkanInstance.presentQueue;
+    surface                 = vulkanInstance.surface;
+}
 
 void Swiftcanon::init()
 {
-    //initVulkan();
+    initVulkan();
 }
 
 void Swiftcanon::run()
 {
     mainLoop();
-    //cleanup();
+    cleanup();
 }
 
 void Swiftcanon::initVulkan()
 {
-    createSurface(); // done
-    pickPhysicalGraphicsDevice(); // done
-    createVulkanLogicalDevice(); // done
-    createSwapChain(); // done
+    createSwapchain(); // done
     createImageViews(); // done
     createRenderPass(); // done
     createDescriptorSetLayout(); // done
     createGraphicsPipeline(); // done
     createDepthResources();
-    createFramebuffers();
-    createCommandPool();
-    createCommandBuffer();
-    loadModel("../src/models/bunny.obj");
+    createFramebuffers(); // done
+    createCommandPool(); // done
+    createCommandBuffer(); // done
+    loadModel("src/models/bunny.obj");
     createVertexBuffer();
     createIndexBuffer();
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
-    createSyncObjects();
+    createSyncObjects(); // done
 }
 
-void Swiftcanon::createSurface()
-{
-    VkResult result = glfwCreateWindowSurface(vulkanInstance.getVkInstance(), window.getNativeWindow(), nullptr, &surface);
-    if (result != VK_SUCCESS) {
-        throw std::runtime_error("[VULKAN] Failed to create Window Surface");
-    }
-}
-
-void Swiftcanon::pickPhysicalGraphicsDevice()
-{
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(vulkanInstance.getVkInstance(), &deviceCount, nullptr);
-
-    if (deviceCount == 0) {
-        throw std::runtime_error("[Vulkan] Failed to find GPUs with Vulkan support");
-    }
-    else{
-        std::vector<VkPhysicalDevice> devices(deviceCount);
-        vkEnumeratePhysicalDevices(vulkanInstance.getVkInstance(), &deviceCount, devices.data());
-
-        for (int i = 0; i < devices.size(); i++) {
-            ratePhysicalGraphicsDevices(devices[i], i);
-        }
-
-        // TODO: Improve log formatting
-        logger.INFO(" {0} Physical Graphics Devices Found:", deviceCount);
-        for (size_t i = 0; i < allDeviceDetails.size(); i++) {
-            if (i == 0) {
-                logger.INFO("   * {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
-            }
-            else{
-                logger.INFO("     {0}, score: {1}", allDeviceDetails[i].name, allDeviceDetails[i].score);
-            }
-        }
-
-        // Gets the device with the highest score
-        if (allDeviceDetails[0].score > 0){
-            physicalDevice = devices[allDeviceDetails[0].deviceIndex];
-            physicalDeviceDetails = allDeviceDetails[0];
-            physicalDeviceIndices = allDeviceIndices[0];
-            logger.INFO(" Device Details: {0}", physicalDeviceDetails.name);
-            logger.INFO("   QueueFamily Indices:");
-            logger.INFO("     Graphics:     {0}", physicalDeviceIndices.graphicsFamily.value());
-            logger.INFO("     Presentation: {0}",  physicalDeviceIndices.presentFamily.value());
-        }
-        else {
-            throw std::runtime_error("[Vulkan] Failed to find a suitable GPU");
-        }
-
-        if (physicalDevice == VK_NULL_HANDLE) {
-            throw std::runtime_error("[Vulkan] Failed to find a suitable GPU");
-        }
-    }
-}
-
-void Swiftcanon::createVulkanLogicalDevice()
-{
-    logger.INFO(" {0} Device Extensions available", physicalDeviceDetails.extensionCount);
-
-    logger.INFO(" {0} Device Extensions enabled:", requiredDeviceExtensions.size());
-    for (size_t i = 0; i < requiredDeviceExtensions.size(); i++) {
-        logger.INFO("   {0}", requiredDeviceExtensions[i]);
-    }
-
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = { physicalDeviceIndices.graphicsFamily.value(), physicalDeviceIndices.presentFamily.value() };
-
-    float queuePriority = 1.0f;
-    for (uint32_t queueFamily : uniqueQueueFamilies) {
-        VkDeviceQueueCreateInfo queueCreateInfo{};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = queueFamily;
-        queueCreateInfo.queueCount = 1;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
-        queueCreateInfos.push_back(queueCreateInfo);
-    }
-
-    VkPhysicalDeviceFeatures deviceFeatures{};
-
-    VkDeviceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    createInfo.pQueueCreateInfos = queueCreateInfos.data();
-    createInfo.pEnabledFeatures = &deviceFeatures;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
-    createInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
-    if (enableValidationLayers) {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(requiredValidationLayers.size());
-        createInfo.ppEnabledLayerNames = requiredValidationLayers.data();
-    }
-    else {
-        createInfo.enabledLayerCount = 0;
-    }
-
-    VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
-    if (result == VK_SUCCESS) {
-        vkGetDeviceQueue(device, physicalDeviceIndices.graphicsFamily.value(), 0, &graphicsQueue);
-        vkGetDeviceQueue(device, physicalDeviceIndices.presentFamily.value(), 0, &presentQueue);
-    }
-    else {
-        std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create Logical Device");
-    }
-}
-
-void Swiftcanon::createSwapChain()
+void Swiftcanon::createSwapchain()
 {
     VkSurfaceCapabilitiesKHR capabilities;
     VkSurfaceFormatKHR surfaceFormat;
     VkPresentModeKHR presentMode;
     VkExtent2D extent;
 
-    logger.INFO(" SwapChain:");
+    logger.INFO(" Swapchain:");
 
     // Get capabilities
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
@@ -256,18 +148,18 @@ void Swiftcanon::createSwapChain()
     createInfo.clipped                      = VK_TRUE;
     createInfo.oldSwapchain                 = VK_NULL_HANDLE;
 
-    VkResult result = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
+    VkResult result = vkCreateSwapchainKHR(logicalDevice, &createInfo, nullptr, &swapChain);
     if (result == VK_SUCCESS) {
-        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr); swapChainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+        vkGetSwapchainImagesKHR(logicalDevice, swapChain, &imageCount, nullptr); swapChainImages.resize(imageCount);
+        vkGetSwapchainImagesKHR(logicalDevice, swapChain, &imageCount, swapChainImages.data());
     }
     else {
         std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to create SwapChain");
+        throw std::runtime_error("[VULKAN] Failed to create Swapchain");
     }
 }
 
-void Swiftcanon::recreateSwapChain()
+void Swiftcanon::recreateSwapchain()
 {
     int width = 0, height = 0;
     window.getFramebufferSize(&width, &height);
@@ -276,28 +168,28 @@ void Swiftcanon::recreateSwapChain()
         glfwWaitEvents();
     }
 
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(logicalDevice);
     
-    cleanupSwapChain();
+    cleanupSwapchain();
 
-    createSwapChain();
+    createSwapchain();
     createImageViews();
     createDepthResources();
     createFramebuffers();
 }
 
-void Swiftcanon::cleanupSwapChain()
+void Swiftcanon::cleanupSwapchain()
 {
-    vkDestroyImageView(device, depthImageView, nullptr);
-    vkDestroyImage(device, depthImage, nullptr);
-    vkFreeMemory(device, depthImageMemory, nullptr);
+    vkDestroyImageView(logicalDevice, depthImageView, nullptr);
+    vkDestroyImage(logicalDevice, depthImage, nullptr);
+    vkFreeMemory(logicalDevice, depthImageMemory, nullptr);
     for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
-        vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+        vkDestroyFramebuffer(logicalDevice, swapChainFramebuffers[i], nullptr);
     }
     for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-        vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+        vkDestroyImageView(logicalDevice, swapChainImageViews[i], nullptr);
     }
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
+    vkDestroySwapchainKHR(logicalDevice, swapChain, nullptr);
 }
 
 void Swiftcanon::createImageViews()
@@ -319,10 +211,10 @@ void Swiftcanon::createImageViews()
         createInfo.subresourceRange.baseArrayLayer  = 0;
         createInfo.subresourceRange.layerCount      = 1;
 
-        VkResult result = vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]);
+        VkResult result = vkCreateImageView(logicalDevice, &createInfo, nullptr, &swapChainImageViews[i]);
         if (result != VK_SUCCESS) {
             std::cerr << string_VkResult(result) << std::endl;
-            throw std::runtime_error("[VULKAN] Failed to create SwapChain ImageViews");
+            throw std::runtime_error("[VULKAN] Failed to create Swapchain ImageViews");
         }
     }
 }
@@ -381,7 +273,7 @@ void Swiftcanon::createRenderPass()
     renderPassInfo.dependencyCount  = 1;
     renderPassInfo.pDependencies    = &dependency;
 
-    VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
+    VkResult result = vkCreateRenderPass(logicalDevice, &renderPassInfo, nullptr, &renderPass);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Render Pass");
@@ -402,7 +294,7 @@ void Swiftcanon::createDescriptorSetLayout()
     layoutInfo.bindingCount = 1;
     layoutInfo.pBindings    = &uboLayoutBinding;
 
-    VkResult result = vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout);
+    VkResult result = vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayout);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Descriptor Set Layout");
@@ -411,8 +303,8 @@ void Swiftcanon::createDescriptorSetLayout()
 
 void Swiftcanon::createGraphicsPipeline()
 {
-    std::vector<char> vertShaderCode = readFile("../src/shaders/compiled/vert.spv");
-    std::vector<char> fragShaderCode = readFile("../src/shaders/compiled/frag.spv");
+    std::vector<char> vertShaderCode = readFile("src/shaders/compiled/vert.spv");
+    std::vector<char> fragShaderCode = readFile("src/shaders/compiled/frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -536,7 +428,7 @@ void Swiftcanon::createGraphicsPipeline()
     pipelineLayoutInfo.pushConstantRangeCount   = 0;        // Optional
     pipelineLayoutInfo.pPushConstantRanges      = nullptr;  // Optional
 
-    VkResult result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
+    VkResult result = vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Pipeline Layout");
@@ -560,14 +452,14 @@ void Swiftcanon::createGraphicsPipeline()
     pipelineInfo.basePipelineHandle     = VK_NULL_HANDLE;   // Optional
     pipelineInfo.basePipelineIndex      = -1;               // Optional
 
-    result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline);
+    result = vkCreateGraphicsPipelines(logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Graphics Pipeline");
     }
 
-    vkDestroyShaderModule(device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(device, vertShaderModule, nullptr);
+    vkDestroyShaderModule(logicalDevice, fragShaderModule, nullptr);
+    vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
 }
 
 void Swiftcanon::createFramebuffers()
@@ -588,7 +480,7 @@ void Swiftcanon::createFramebuffers()
         framebufferInfo.height          = swapChainExtent.height;
         framebufferInfo.layers          = 1;
 
-        VkResult result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]);
+        VkResult result = vkCreateFramebuffer(logicalDevice, &framebufferInfo, nullptr, &swapChainFramebuffers[i]);
         if (result != VK_SUCCESS) {
             std::cerr << string_VkResult(result) << std::endl;
             throw std::runtime_error("[VULKAN] Failed to create Framebuffer");
@@ -603,7 +495,7 @@ void Swiftcanon::createCommandPool()
     poolInfo.flags              = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex   = physicalDeviceIndices.graphicsFamily.value();
 
-    VkResult result = vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool);
+    VkResult result = vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &commandPool);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create CommandPool");
@@ -620,7 +512,7 @@ void Swiftcanon::createCommandBuffer()
     allocInfo.level                 = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount    = static_cast<uint32_t>(commandBuffers.size());
 
-    VkResult result = vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data());
+    VkResult result = vkAllocateCommandBuffers(logicalDevice, &allocInfo, commandBuffers.data());
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create CommandBuffer");
@@ -668,9 +560,9 @@ void Swiftcanon::createVertexBuffer()
     );
 
     void* data;
-    vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vkMapMemory(logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
         memcpy(data, vertices.data(), (size_t) bufferSize);
-    vkUnmapMemory(device, stagingBufferMemory);
+    vkUnmapMemory(logicalDevice, stagingBufferMemory);
 
     createBuffer(
         bufferSize,
@@ -681,8 +573,8 @@ void Swiftcanon::createVertexBuffer()
     );
 
     copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-    vkDestroyBuffer(device, stagingBuffer, nullptr);
-    vkFreeMemory(device, stagingBufferMemory, nullptr);
+    vkDestroyBuffer(logicalDevice, stagingBuffer, nullptr);
+    vkFreeMemory(logicalDevice, stagingBufferMemory, nullptr);
 }
 
 void Swiftcanon::createIndexBuffer()
@@ -699,9 +591,9 @@ void Swiftcanon::createIndexBuffer()
     );
 
     void* data;
-    vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vkMapMemory(logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
         memcpy(data, indices.data(), (size_t) bufferSize);
-    vkUnmapMemory(device, stagingBufferMemory);
+    vkUnmapMemory(logicalDevice, stagingBufferMemory);
 
     createBuffer(
         bufferSize,
@@ -713,8 +605,8 @@ void Swiftcanon::createIndexBuffer()
 
     copyBuffer(stagingBuffer, indexBuffer, bufferSize);
 
-    vkDestroyBuffer(device, stagingBuffer, nullptr);
-    vkFreeMemory(device, stagingBufferMemory, nullptr);
+    vkDestroyBuffer(logicalDevice, stagingBuffer, nullptr);
+    vkFreeMemory(logicalDevice, stagingBufferMemory, nullptr);
 }
 
 void Swiftcanon::createUniformBuffers() {
@@ -733,7 +625,7 @@ void Swiftcanon::createUniformBuffers() {
             uniformBuffersMemory[i]
         );
         vkMapMemory(
-            device,
+            logicalDevice,
             uniformBuffersMemory[i],
             0,
             bufferSize,
@@ -755,7 +647,7 @@ void Swiftcanon::createDescriptorPool()
     poolInfo.pPoolSizes     = &poolSize;
     poolInfo.maxSets        = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
     
-    VkResult result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool);
+    VkResult result = vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr, &descriptorPool);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create DescriptorPool");
@@ -772,7 +664,7 @@ void Swiftcanon::createDescriptorSets()
     allocInfo.pSetLayouts           = layouts.data();
 
     descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
-    VkResult result = vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data());
+    VkResult result = vkAllocateDescriptorSets(logicalDevice, &allocInfo, descriptorSets.data());
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to allocate DescriptorSets");
@@ -795,100 +687,7 @@ void Swiftcanon::createDescriptorSets()
         descriptorWrite.pImageInfo          = nullptr;      // Optional
         descriptorWrite.pTexelBufferView    = nullptr;      // Optional
 
-        vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-    }
-}
-
-// TODO: Massively improve scoring factors to better score the GPUs
-void Swiftcanon::ratePhysicalGraphicsDevices(VkPhysicalDevice device, int deviceIndex)
-{
-    VkPhysicalDeviceFeatures deviceFeatures;
-    VkPhysicalDeviceProperties deviceProperties;
-    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-    vkGetPhysicalDeviceProperties(device, &deviceProperties);
-
-    uint32_t deviceExtensionCount;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &deviceExtensionCount, nullptr);
-    std::vector<VkExtensionProperties> availableDeviceExtensions(deviceExtensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &deviceExtensionCount, availableDeviceExtensions.data());
-
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-    DeviceDetails deviceDetails;
-    std::string* string = new std::string(deviceProperties.deviceName);
-    deviceDetails.name = string->c_str();
-    deviceDetails.score = 0;
-    deviceDetails.deviceIndex = deviceIndex;
-    deviceDetails.extensionCount = deviceExtensionCount;
-
-    // Discrete GPUs have a significant performance advantage
-    if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-        deviceDetails.score += 1000;
-    }
-    // Maximum possible size of textures affects graphics quality
-    deviceDetails.score += deviceProperties.limits.maxImageDimension2D;
-
-    // Check if device supports required extensions
-    int supportedExtensions = 0;
-    for (const char* requiredDeviceExtension : requiredDeviceExtensions) {
-        for (VkExtensionProperties extension : availableDeviceExtensions) {
-            if (strcmp(requiredDeviceExtension, extension.extensionName) == 0) {
-                supportedExtensions++;
-                continue;
-            }
-        }
-    }
-    if (supportedExtensions != requiredDeviceExtensions.size()) {
-        deviceDetails.score = 0;
-        logger.WARN(" Physical Device {0} does not support required Vulkan Extensions, setting score to 0", deviceDetails.name);
-    }
-    
-    // Check if device supports required queues
-    VkBool32 presentSupport;
-    QueueFamilyIndices deviceIndices;
-    for (uint32_t i = 0; i < queueFamilies.size(); i++) {
-        presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-        if(presentSupport && (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)){
-            deviceIndices.presentFamily = i;
-            deviceIndices.graphicsFamily = i;
-            break;
-        }
-        else{
-            if (presentSupport) {
-                deviceIndices.presentFamily = i;
-            }
-            if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                deviceIndices.graphicsFamily = i;
-            }
-        }
-    }
-    if(deviceIndices.isComplete() == false){
-        deviceDetails.score = 0;
-        logger.WARN(" Physical Device {0} does not have Vulkan Compute and Render capabilities, setting score to 0", deviceDetails.name);
-    }
-
-    // Insert Entry in DeviceDetails Array
-    if (allDeviceDetails.size() == 0){
-        allDeviceDetails.push_back(deviceDetails);
-        allDeviceIndices.push_back(deviceIndices);
-    }
-    else{
-        for (size_t i = 0; i < allDeviceDetails.size(); i++) {
-            if (deviceDetails.score > allDeviceDetails[i].score){
-                allDeviceDetails.insert(allDeviceDetails.begin() + i, deviceDetails);
-                allDeviceIndices.insert(allDeviceIndices.begin() + i, deviceIndices);
-                break;
-            }
-            if (i == allDeviceDetails.size() - 1) {
-                allDeviceDetails.push_back(deviceDetails);
-                allDeviceIndices.push_back(deviceIndices);
-                break;
-            }
-        }
+        vkUpdateDescriptorSets(logicalDevice, 1, &descriptorWrite, 0, nullptr);
     }
 }
 
@@ -961,17 +760,17 @@ void Swiftcanon::createSyncObjects()
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkResult result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]);
+        VkResult result = vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]);
         if (result != VK_SUCCESS) {
             std::cerr << string_VkResult(result) << std::endl;
             throw std::runtime_error("[VULKAN] Failed to create Semaphore");
         }
-        result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]);
+        result = vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]);
         if (result != VK_SUCCESS) {
             std::cerr << string_VkResult(result) << std::endl;
             throw std::runtime_error("[VULKAN] Failed to create Semaphore");
         }
-        result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]);
+        result = vkCreateFence(logicalDevice, &fenceInfo, nullptr, &inFlightFences[i]);
         if (result != VK_SUCCESS) {
             std::cerr << string_VkResult(result) << std::endl;
             throw std::runtime_error("[VULKAN] Failed to create Fence");
@@ -987,7 +786,7 @@ VkShaderModule Swiftcanon::createShaderModule(const std::vector<char>& code)
     createInfo.pCode    = reinterpret_cast<const uint32_t*>(code.data());
 
     VkShaderModule shaderModule;
-    VkResult result = vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
+    VkResult result = vkCreateShaderModule(logicalDevice, &createInfo, nullptr, &shaderModule);
     if (result == VK_SUCCESS) {
         return shaderModule;
     }
@@ -1067,27 +866,27 @@ void Swiftcanon::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMem
     bufferInfo.usage        = usage;
     bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult result = vkCreateBuffer(device, &bufferInfo, nullptr, &buffer);
+    VkResult result = vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &buffer);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Buffer");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(logicalDevice, buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType             = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize    = memRequirements.size;
     allocInfo.memoryTypeIndex   = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    result = vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory);
+    result = vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &bufferMemory);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to allocate Buffer Memory");
     }
 
-    vkBindBufferMemory(device, buffer, bufferMemory, 0);
+    vkBindBufferMemory(logicalDevice, buffer, bufferMemory, 0);
 }
 
 void Swiftcanon::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
@@ -1099,7 +898,7 @@ void Swiftcanon::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize
     allocInfo.commandBufferCount    = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+    vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType                 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1121,7 +920,7 @@ void Swiftcanon::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize
     vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     
     vkQueueWaitIdle(graphicsQueue);
-    vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
 }
 
 VkFormat Swiftcanon::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
@@ -1158,27 +957,27 @@ void Swiftcanon::createImage(uint32_t width, uint32_t height, VkFormat format, V
     imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult result = vkCreateImage(device, &imageInfo, nullptr, &image);
+    VkResult result = vkCreateImage(logicalDevice, &imageInfo, nullptr, &image);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Image");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device, image, &memRequirements);
+    vkGetImageMemoryRequirements(logicalDevice, image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType             = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize    = memRequirements.size;
     allocInfo.memoryTypeIndex   = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    result = vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory);
+    result = vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &imageMemory);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to allocate Image Memory");
     }
 
-    vkBindImageMemory(device, image, imageMemory, 0);
+    vkBindImageMemory(logicalDevice, image, imageMemory, 0);
 }
 
 VkImageView Swiftcanon::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
@@ -1195,7 +994,7 @@ VkImageView Swiftcanon::createImageView(VkImage image, VkFormat format, VkImageA
     viewInfo.subresourceRange.layerCount        = 1;
 
     VkImageView imageView;
-    VkResult result = vkCreateImageView(device, &viewInfo, nullptr, &imageView);
+    VkResult result = vkCreateImageView(logicalDevice, &viewInfo, nullptr, &imageView);
     if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
         throw std::runtime_error("[VULKAN] Failed to create Texture Image View");
@@ -1208,26 +1007,27 @@ void Swiftcanon::mainLoop()
 {
     while (window.isOpen()) {
         window.listen();
-        //drawFrame();
+        drawFrame();
+        // vulkanCommandDispatcher.dispatchCommand();
     }
-    //vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(logicalDevice);
 }
 
 void Swiftcanon::drawFrame()
 {
     uint32_t imageIndex;
-    vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(logicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
     
-    VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(logicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreateSwapChain();
+        recreateSwapchain();
         return;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        throw std::runtime_error("[Vulkan] Failed to acquire SwapChain Image");
+        throw std::runtime_error("[Vulkan] Failed to acquire Swapchain Image");
     }
 
-    vkResetFences(device, 1, &inFlightFences[currentFrame]);
+    vkResetFences(logicalDevice, 1, &inFlightFences[currentFrame]);
     vkResetCommandBuffer(commandBuffers[currentFrame], 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
     updateUniformBuffer(currentFrame);
@@ -1265,13 +1065,13 @@ void Swiftcanon::drawFrame()
 
     result = vkQueuePresentKHR(graphicsQueue, &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || window.getFramebufferResized()) {
-        logger.INFO(" Recreating SwapChain, VkResult: {0}, FramebufferResized: {1}", string_VkResult(result), window.getFramebufferResized());
+        logger.INFO(" Recreating Swapchain, VkResult: {0}, FramebufferResized: {1}", string_VkResult(result), window.getFramebufferResized());
         window.setFramebufferResized(false);
-        recreateSwapChain();
+        recreateSwapchain();
     }
     else if (result != VK_SUCCESS) {
         std::cerr << string_VkResult(result) << std::endl;
-        throw std::runtime_error("[VULKAN] Failed to present SwapChain Image");
+        throw std::runtime_error("[VULKAN] Failed to present Swapchain Image");
     }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -1293,27 +1093,24 @@ void Swiftcanon::updateUniformBuffer(uint32_t currentImage)
 
 void Swiftcanon::cleanup()
 {
-    cleanupSwapChain();
+    cleanupSwapchain();
 for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    vkDestroyBuffer(device, uniformBuffers[i], nullptr);
-    vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
+    vkDestroyBuffer(logicalDevice, uniformBuffers[i], nullptr);
+    vkFreeMemory(logicalDevice, uniformBuffersMemory[i], nullptr);
 }
-    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
-    vkDestroyBuffer(device, indexBuffer, nullptr);
-    vkFreeMemory(device, indexBufferMemory, nullptr);
-    vkDestroyBuffer(device, vertexBuffer, nullptr);
-    vkFreeMemory(device, vertexBufferMemory, nullptr);
+    vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(logicalDevice, descriptorSetLayout, nullptr);
+    vkDestroyBuffer(logicalDevice, indexBuffer, nullptr);
+    vkFreeMemory(logicalDevice, indexBufferMemory, nullptr);
+    vkDestroyBuffer(logicalDevice, vertexBuffer, nullptr);
+    vkFreeMemory(logicalDevice, vertexBufferMemory, nullptr);
 for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-    vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
-    vkDestroyFence(device, inFlightFences[i], nullptr);
+    vkDestroySemaphore(logicalDevice, imageAvailableSemaphores[i], nullptr);
+    vkDestroySemaphore(logicalDevice, renderFinishedSemaphores[i], nullptr);
+    vkDestroyFence(logicalDevice, inFlightFences[i], nullptr);
 }
-    vkDestroyCommandPool(device, commandPool, nullptr);
-    vkDestroyPipeline(device, graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-    vkDestroyRenderPass(device, renderPass, nullptr);
-    
-    vkDestroyDevice(device, nullptr);
-    vkDestroySurfaceKHR(vulkanInstance.getVkInstance(), surface, nullptr);
+    vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
+    vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
+    vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
 }

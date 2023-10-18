@@ -9,7 +9,7 @@ GraphicsPipeline::GraphicsPipeline(VulkanInstance* vkInstance, Swapchain* swapch
     id += 1;
 
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format          = swapchain->getSwapChainImageFormat();
+    colorAttachment.format          = swapchain->swapChainImageFormat;
     colorAttachment.samples         = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp         = VK_ATTACHMENT_STORE_OP_STORE;
@@ -85,6 +85,8 @@ GraphicsPipeline::GraphicsPipeline(VulkanInstance* vkInstance, Swapchain* swapch
         throw std::runtime_error("[VULKAN] Failed to create Descriptor Set Layout");
     }
 
+    swapchain->createSwapchainFramebuffers(renderPass);
+
     std::vector<char> vertShaderCode = utils::readFile("src/shaders/compiled/vert.spv");
     std::vector<char> fragShaderCode = utils::readFile("src/shaders/compiled/frag.spv");
 
@@ -134,14 +136,14 @@ GraphicsPipeline::GraphicsPipeline(VulkanInstance* vkInstance, Swapchain* swapch
     VkViewport viewport{};
     viewport.x          = 0.0f;
     viewport.y          = 0.0f;
-    viewport.width      = (float) swapchain->getSwapchainExtent().width;
-    viewport.height     = (float) swapchain->getSwapchainExtent().height;
+    viewport.width      = (float) swapchain->swapChainExtent.width;
+    viewport.height     = (float) swapchain->swapChainExtent.height;
     viewport.minDepth   = 0.0f;
     viewport.maxDepth   = 1.0f;
 
     VkRect2D scissor{};
     scissor.offset      = {0, 0};
-    scissor.extent      = swapchain->getSwapchainExtent();
+    scissor.extent      = swapchain->swapChainExtent;
 
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

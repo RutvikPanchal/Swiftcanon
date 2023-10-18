@@ -8,20 +8,28 @@
 
 class Swapchain
 {
+    // TODO: Doesn't seem quite perfect, maybe use inheritance or make variables public
+    friend class CommandDispatcher;
+    friend class GraphicsPipeline;
+    
 public:
     Swapchain(VulkanInstance* vkInstance);
    ~Swapchain();
 
-   VkExtent2D   getSwapchainExtent()        const { return extent; }
-   VkFormat     getSwapChainImageFormat()   const { return swapChainImageFormat; }
+    VkSwapchainKHR              getSwapchain()              const { return swapChain; }
+    VkExtent2D                  getSwapchainExtent()        const { return swapChainExtent; }
+    VkFormat                    getSwapchainImageFormat()   const { return swapChainImageFormat; }
+    std::vector<VkFramebuffer>  getSwapchainFrameBuffers()  const { return swapChainFramebuffers; }
+   
+    void         createSwapchainFramebuffers(VkRenderPass renderPass);
 
 private:
     void getSurfaceCapabilities();
     void getSuitableSurfaceFormat();
     void getSuitablePresentMode();
     
-    void createSwapChain();
-    void createSwapChainImageViews();
+    void createSwapchain();
+    void createSwapchainImageViews();
 
 private:
     static int                  id;
@@ -29,12 +37,14 @@ private:
     std::vector<VkImage>        swapChainImages;
     std::vector<VkImageView>    swapChainImageViews;
 
+    std::vector<VkFramebuffer>  swapChainFramebuffers;
+
     VkSurfaceCapabilitiesKHR    capabilities;
     VkSurfaceFormatKHR          surfaceFormat;
     VkPresentModeKHR            presentMode;
 
     VkFormat                    swapChainImageFormat;
-    VkExtent2D                  extent;
+    VkExtent2D                  swapChainExtent;
 
 private:
     VulkanInstance* vkInstance;

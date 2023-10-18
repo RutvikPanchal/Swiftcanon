@@ -11,6 +11,7 @@
 
 #include "Window.h"
 #include "VulkanInstance.h"
+#include "CommandDispatcher.h"
 #include "Swapchain.h"
 #include "GraphicsPipeline.h"
 
@@ -46,19 +47,6 @@ struct Vertex {
         return attributeDescriptions;
     }
 };
-struct DeviceDetails {
-    const char* name;
-    int         deviceIndex;
-    int         score;
-    uint32_t    extensionCount;
-};
-struct QueueFamilyIndices {
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
-    bool isComplete() {
-        return graphicsFamily.has_value() && presentFamily.has_value();
-    }
-};
 
 class Swiftcanon
 {
@@ -70,8 +58,9 @@ public:
 private:
     Window              window;
     VulkanInstance      vulkanInstance          = VulkanInstance(&window);
-    Swapchain           vulkanSwapChain         = Swapchain(&vulkanInstance);
-    GraphicsPipeline    vulkanGraphicsPipeline  = GraphicsPipeline(&vulkanInstance, &vulkanSwapChain);
+    // Swapchain           vulkanSwapchain         = Swapchain(&vulkanInstance);
+    // GraphicsPipeline    vulkanGraphicsPipeline  = GraphicsPipeline(&vulkanInstance, &vulkanSwapchain);
+    // CommandDispatcher   vulkanCommandDispatcher = CommandDispatcher(&vulkanInstance, &vulkanSwapchain, &vulkanGraphicsPipeline);
 
     Logger          logger          = Logger("SWIFTCANON");
 
@@ -81,33 +70,22 @@ private:
     void cleanup();
 
     // Vulkan Compute Setup
-    void pickPhysicalGraphicsDevice();
-    void createVulkanLogicalDevice();
-    void ratePhysicalGraphicsDevices(VkPhysicalDevice device, int deviceIndex);
-
-    // Vulkan Compute Setup
-    std::vector<const char*> const  requiredValidationLayers;
-    VkInstance                      vkInstance;
-    std::vector<DeviceDetails>      allDeviceDetails;
-    std::vector<QueueFamilyIndices> allDeviceIndices;
-    DeviceDetails                   physicalDeviceDetails;
-    QueueFamilyIndices              physicalDeviceIndices;
-    VkPhysicalDevice                physicalDevice  = VK_NULL_HANDLE;
-    std::vector<const char*>        requiredDeviceExtensions;
-    VkDevice                        device;
-    VkQueue                         graphicsQueue;
+    VkInstance                          vkInstance;
+    VkPhysicalDevice                    physicalDevice  = VK_NULL_HANDLE;
+    VulkanInstance::QueueFamilyIndices  physicalDeviceIndices;
+    VkDevice                            logicalDevice;
+    VkQueue                             graphicsQueue;
+    VkQueue                             presentQueue;
+    VkSurfaceKHR                        surface;
 
     // Vulkan Presentation Setup
-    void createSurface();
-    void createSwapChain();
-    void recreateSwapChain();
-    void cleanupSwapChain();
+    void createSwapchain();
+    void recreateSwapchain();
+    void cleanupSwapchain();
     void createImageViews();
     void createFramebuffers();
 
     // Vulkan Presentation Setup
-    VkSurfaceKHR                    surface;
-    VkQueue                         presentQueue;
     VkSwapchainKHR                  swapChain;
     std::vector<VkImage>            swapChainImages;
     VkFormat                        swapChainImageFormat;
