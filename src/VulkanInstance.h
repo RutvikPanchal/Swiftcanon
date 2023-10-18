@@ -34,9 +34,10 @@ public:
    ~VulkanInstance();
 
     // TODO: remove these maybe?    
-    VkInstance      getVkInstance()             const { return vkInstance; }
-    VkSurfaceKHR    getWindowSurface()          const { return surface; }
-    VkDevice        getVulkanLogicalDevice()    const { return logicalDevice; }
+    VkInstance          getVkInstance()             const { return vkInstance; }
+    VkSurfaceKHR        getWindowSurface()          const { return surface; }
+    VkPhysicalDevice    getPhysicalDevice()         const { return physicalDevice; }
+    VkDevice            getVulkanLogicalDevice()    const { return logicalDevice; }
     
 private:
     void checkVulkanValidationLayers();

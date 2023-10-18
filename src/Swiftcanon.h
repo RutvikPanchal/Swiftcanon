@@ -14,8 +14,9 @@
 #include "CommandDispatcher.h"
 #include "Swapchain.h"
 #include "GraphicsPipeline.h"
-
 #include "Logger.h"
+
+#include "utils.h"
 
 struct UniformBufferObject {
     alignas(16) glm::mat4 model;
@@ -59,7 +60,7 @@ private:
     Window              window;
     VulkanInstance      vulkanInstance          = VulkanInstance(&window);
     Swapchain           vulkanSwapchain         = Swapchain(&vulkanInstance);
-    // GraphicsPipeline    vulkanGraphicsPipeline  = GraphicsPipeline(&vulkanInstance, &vulkanSwapchain);
+    GraphicsPipeline    vulkanGraphicsPipeline  = GraphicsPipeline(&vulkanInstance, &vulkanSwapchain);
     // CommandDispatcher   vulkanCommandDispatcher = CommandDispatcher(&vulkanInstance, &vulkanSwapchain, &vulkanGraphicsPipeline);
 
     Logger          logger          = Logger("SWIFTCANON");
@@ -74,9 +75,6 @@ private:
     void cleanupDepthResources();
 
     // Vulkan Pipeline Setup
-    void createRenderPass();
-    void createDescriptorSetLayout();
-    void createGraphicsPipeline();
     void createCommandPool();
     void createDepthResources();
     void createDescriptorPool();
@@ -89,10 +87,6 @@ private:
     VkShaderModule createShaderModule(const std::vector<char>& code);
 
     // Vulkan Pipeline Setup
-    VkRenderPass                    renderPass;
-    VkDescriptorSetLayout           descriptorSetLayout;
-    VkPipelineLayout                pipelineLayout;
-    VkPipeline                      graphicsPipeline;
     VkImage                         depthImage;
     VkDeviceMemory                  depthImageMemory;
     VkImageView                     depthImageView;

@@ -43,4 +43,5 @@ namespace utils
 
     // Vulkan Utils
     void                loadModel(const char* path);
+    VkFormat            findSupportedFormat(VkPhysicalDevice physicalDevice, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 }

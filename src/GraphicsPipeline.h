@@ -11,6 +11,7 @@
 
 class GraphicsPipeline
 {
+    friend class Swiftcanon;
 public:
     GraphicsPipeline(VulkanInstance* vkInstance, Swapchain* swapchain);
    ~GraphicsPipeline();
@@ -19,6 +20,10 @@ public:
    VkPipeline   getGraphicsPipeline()   const { return graphicsPipeline; }
 
 private:
+    void createRenderPass();
+    void createDescriptorSetLayout();
+    void createGraphicsPipeline();
+
     VkShaderModule createShaderModule(const std::vector<char>& code);
 
 private:
