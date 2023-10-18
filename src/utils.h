@@ -4,13 +4,14 @@
 
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 #include <tiny_obj_loader.h>
 
 namespace utils
 {
     // Basic Structs
 
-    // Graphics Structs
+    // Vulkan Structs
     struct Vertex {
         glm::vec3 pos;
         glm::vec3 color;
@@ -40,6 +41,6 @@ namespace utils
     // Basic Utils
     std::vector<char>   readFile(const std::string& filename);
 
-    // Graphics Utils
+    // Vulkan Utils
     void                loadModel(const char* path);
 }

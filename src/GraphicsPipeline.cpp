@@ -85,7 +85,7 @@ GraphicsPipeline::GraphicsPipeline(VulkanInstance* vkInstance, Swapchain* swapch
         throw std::runtime_error("[VULKAN] Failed to create Descriptor Set Layout");
     }
 
-    swapchain->createSwapchainFramebuffers(renderPass);
+    swapchain->createSwapchainFramebuffers(renderPass, nullptr);
 
     std::vector<char> vertShaderCode = utils::readFile("src/shaders/compiled/vert.spv");
     std::vector<char> fragShaderCode = utils::readFile("src/shaders/compiled/frag.spv");

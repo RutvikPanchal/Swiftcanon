@@ -58,7 +58,7 @@ public:
 private:
     Window              window;
     VulkanInstance      vulkanInstance          = VulkanInstance(&window);
-    // Swapchain           vulkanSwapchain         = Swapchain(&vulkanInstance);
+    Swapchain           vulkanSwapchain         = Swapchain(&vulkanInstance);
     // GraphicsPipeline    vulkanGraphicsPipeline  = GraphicsPipeline(&vulkanInstance, &vulkanSwapchain);
     // CommandDispatcher   vulkanCommandDispatcher = CommandDispatcher(&vulkanInstance, &vulkanSwapchain, &vulkanGraphicsPipeline);
 
@@ -69,29 +69,9 @@ private:
     void mainLoop();
     void cleanup();
 
-    // Vulkan Compute Setup
-    VkInstance                          vkInstance;
-    VkPhysicalDevice                    physicalDevice  = VK_NULL_HANDLE;
-    VulkanInstance::QueueFamilyIndices  physicalDeviceIndices;
-    VkDevice                            logicalDevice;
-    VkQueue                             graphicsQueue;
-    VkQueue                             presentQueue;
-    VkSurfaceKHR                        surface;
-
     // Vulkan Presentation Setup
-    void createSwapchain();
     void recreateSwapchain();
-    void cleanupSwapchain();
-    void createImageViews();
-    void createFramebuffers();
-
-    // Vulkan Presentation Setup
-    VkSwapchainKHR                  swapChain;
-    std::vector<VkImage>            swapChainImages;
-    VkFormat                        swapChainImageFormat;
-    VkExtent2D                      swapChainExtent;
-    std::vector<VkImageView>        swapChainImageViews;
-    std::vector<VkFramebuffer>      swapChainFramebuffers;
+    void cleanupDepthResources();
 
     // Vulkan Pipeline Setup
     void createRenderPass();
@@ -153,11 +133,4 @@ private:
     // UTIL
     std::vector<char> readFile(const std::string& filename);
     void loadModel(const char* path);
-
-    // TODO: not best way to to this, should have like a global debug setup
-    #ifdef NDEBUG
-        const bool enableValidationLayers = false;
-    #else
-        const bool enableValidationLayers = true;
-    #endif
 };

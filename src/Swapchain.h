@@ -11,6 +11,7 @@ class Swapchain
     // TODO: Doesn't seem quite perfect, maybe use inheritance or make variables public
     friend class CommandDispatcher;
     friend class GraphicsPipeline;
+    friend class Swiftcanon;
     
 public:
     Swapchain(VulkanInstance* vkInstance);
@@ -21,7 +22,8 @@ public:
     VkFormat                    getSwapchainImageFormat()   const { return swapChainImageFormat; }
     std::vector<VkFramebuffer>  getSwapchainFrameBuffers()  const { return swapChainFramebuffers; }
    
-    void         createSwapchainFramebuffers(VkRenderPass renderPass);
+    void        recreateSwapchain();
+    void        createSwapchainFramebuffers(VkRenderPass renderPass, VkImageView depthImageView);
 
 private:
     void getSurfaceCapabilities();

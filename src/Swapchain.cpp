@@ -35,17 +35,37 @@ Swapchain::~Swapchain()
     vkDestroySwapchainKHR(vkInstance->logicalDevice, swapChain, nullptr);
 }
 
-void Swapchain::createSwapchainFramebuffers(VkRenderPass renderPass)
+void Swapchain::recreateSwapchain()
+{
+    for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
+        vkDestroyFramebuffer(vkInstance->logicalDevice, swapChainFramebuffers[i], nullptr);
+    }
+    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+        vkDestroyImageView(vkInstance->logicalDevice, swapChainImageViews[i], nullptr);
+    }
+    vkDestroySwapchainKHR(vkInstance->logicalDevice, swapChain, nullptr);
+    
+    if (!vkInstance->surface) {
+        throw std::runtime_error("[SWAPCHAIN] No window surface found to bind the Swapchain to");
+    }
+    else{
+        getSurfaceCapabilities();
+        getSuitableSurfaceFormat();
+        getSuitablePresentMode();
+
+        createSwapchain();
+        createSwapchainImageViews();
+    }
+}
+
+void Swapchain::createSwapchainFramebuffers(VkRenderPass renderPass, VkImageView depthImageView)
 {
     swapChainFramebuffers.resize(swapChainImageViews.size());
     for (size_t i = 0; i < swapChainImageViews.size(); i++) {
         
-        // std::array<VkImageView, 2> attachments = {
-        //     swapChainImageViews[i],
-        //     depthImageView
-        // };
-        std::array<VkImageView, 1> attachments = {
-            swapChainImageViews[i]
+        std::array<VkImageView, 2> attachments = {
+            swapChainImageViews[i],
+            depthImageView
         };
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
